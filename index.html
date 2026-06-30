@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>亚马逊仓储费计算器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #20251f;
+      --muted: #667064;
+      --line: #d9ded6;
+      --accent: #176957;
+      --accent-2: #a24f1d;
+      --soft: #e7f3ee;
+      --soft-2: #fff1e7;
+      --warn: #9a321f;
+      --ok: #1f6a42;
+      --shadow: 0 14px 36px rgba(34, 42, 36, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #fbfcfb 0%, var(--bg) 100%);
+    }
+
+    main {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 18px 42px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: end;
+      padding: 16px 0 18px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3 { margin: 0; line-height: 1.2; }
+    h1 { font-size: 30px; letter-spacing: 0; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    p { margin: 7px 0 0; color: var(--muted); line-height: 1.55; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 10px;
+      border: 1px solid rgba(23, 105, 87, 0.2);
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-body { padding: 16px; }
+    .stack { display: grid; gap: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, select, textarea, button { font: inherit; }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 10px;
+    }
+
+    textarea {
+      min-height: 168px;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    button.secondary { background: #fff; color: var(--accent); }
+    button.ghost { background: #fff; color: var(--muted); border-color: var(--line); }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--muted);
+      min-height: 34px;
+      padding: 6px 10px;
+    }
+
+    .tab.active {
+      border-color: rgba(23, 105, 87, 0.25);
+      background: var(--soft);
+      color: var(--accent);
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      background: #fff;
+      min-height: 94px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .metric small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .notice {
+      border: 1px solid rgba(162, 79, 29, 0.25);
+      background: var(--soft-2);
+      color: #6f3718;
+      border-radius: 8px;
+      padding: 10px 12px;
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    .ok {
+      border-color: rgba(31, 106, 66, 0.22);
+      background: #edf7f1;
+      color: var(--ok);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      background: #fafbf9;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td.num, th.num { text-align: right; }
+    td input { min-height: 32px; padding: 5px 7px; font-size: 12px; }
+
+    .table-wrap {
+      max-height: 438px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .source-list {
+      display: grid;
+      gap: 8px;
+      max-height: 280px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .source-item {
+      display: grid;
+      gap: 3px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    .source-item a { color: var(--accent); text-decoration: none; font-weight: 700; overflow-wrap: anywhere; }
+    .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    .hidden { display: none !important; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .split { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      main { padding: 16px 12px 30px; }
+      header { grid-template-columns: 1fr; align-items: start; }
+      h1 { font-size: 24px; }
+      .grid, .grid-3, .results { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>亚马逊仓储费计算器</h1>
+      <p>按站点、月份、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率可直接编辑，适合做新品备货和滞销库存复盘。</p>
+    </div>
+    <span class="badge">支持 20 个 Marketplace 来源链接</span>
+  </header>
+
+  <div class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>输入</h2>
+        <span class="badge" id="sourceBadge">US / USD</span>
+      </div>
+      <div class="panel-body stack">
+        <div class="grid">
+          <label>站点
+            <select id="marketplace"></select>
+          </label>
+          <label>计费季节
+            <select id="seasonBand">
+              <option value="offPeak">淡季</option>
+              <option value="peak">旺季</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>自动尺寸类型
+            <input id="sizeTypeLabel" value="自动判断" disabled>
+            <input id="sizeType" type="hidden" value="standard">
+          </label>
+          <label>仓储类目
+            <select id="storageCategory">
+              <option value="default">普通类目</option>
+              <option value="us_aged_exempt">US/CA 服装/鞋包/珠宝/手表（181-270 天超龄费豁免）</option>
+              <option value="jp_fashion">JP 服装/时尚配件、鞋靴/箱包</option>
+              <option value="eu_fashion">UK/EU 服装、眼镜、鞋靴和箱包</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>类目要求
+            <input id="categoryNotice" value="当前站点无需提供仓储类目" disabled>
+          </label>
+          <label>危险品
+            <select id="hazmat">
+              <option value="no">否</option>
+              <option value="yes">是</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>商品重量 kg
+            <input id="weightKg" type="number" min="0" step="0.001" value="0.5">
+          </label>
+          <label>计费体积单位
+            <select id="billingUnit">
+              <option value="auto">跟随站点</option>
+              <option value="ft3">立方英尺 ft³</option>
+              <option value="m3">立方米 m³</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid-3">
+          <label>长 cm
+            <input id="length" type="number" min="0" step="0.01" value="30">
+          </label>
+          <label>宽 cm
+            <input id="width" type="number" min="0" step="0.01" value="20">
+          </label>
+          <label>高 cm
+            <input id="height" type="number" min="0" step="0.01" value="5">
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>单品数量
+            <input id="units" type="number" min="0" step="1" value="1">
+          </label>
+          <label>计费天数
+            <input id="daysInMonth" type="number" min="1" max="31" step="1" value="30">
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>单品存放/周转天数
+            <input id="storageDays" type="number" min="0" step="0.1" value="45">
+          </label>
+          <label>仓储利用率周数（可选）
+            <input id="utilizationWeeks" type="number" min="0" step="0.1" value="0">
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>库存库龄
+            <select id="ageBand">
+              <option value="0_90">0-90 天（含 90）</option>
+              <option value="91_180">91-180 天（含 180）</option>
+              <option value="181_210">181-210 天（含 210）</option>
+              <option value="211_240">211-240 天（含 240）</option>
+              <option value="241_270">241-270 天（含 270）</option>
+              <option value="271_300">271-300 天（含 300）</option>
+              <option value="301_330">301-330 天（含 330）</option>
+              <option value="331_365">331-365 天（含 365）</option>
+              <option value="366_455">366-455 天（含 455）</option>
+              <option value="456_plus">456 天以上（不含 455）</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="calcBtn">计算</button>
+          <button class="secondary" id="copyResultBtn">复制结果</button>
+          <button class="ghost" id="resetBtn">重置</button>
+        </div>
+
+        <div class="notice" id="dataNotice"></div>
+        <div class="notice ok">
+          单品仓储费需要提供：站点、计费季节、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分站点还需要选择仓储类目。工具会按站点尺寸政策自动判断标准尺寸或大件，再套用对应仓储费率。
+        </div>
+      </div>
+    </section>
+
+    <section class="stack">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>结果</h2>
+          <span class="subtle" id="formulaText">体积 x 数量 x 费率</span>
+        </div>
+        <div class="panel-body stack">
+          <div class="results">
+            <div class="metric">
+              <span>月仓储基础费</span>
+              <strong id="baseFee">-</strong>
+              <small id="baseRateText">-</small>
+            </div>
+            <div class="metric">
+              <span>仓储利用率附加费</span>
+              <strong id="utilizationFee">-</strong>
+              <small id="utilizationRateText">-</small>
+            </div>
+            <div class="metric">
+              <span>库龄附加费</span>
+              <strong id="agedFee">-</strong>
+              <small id="agedRateText">-</small>
+            </div>
+            <div class="metric">
+              <span>预计单品仓储费</span>
+              <strong id="totalFee">-</strong>
+              <small id="perUnitText">-</small>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="table-wrap">
+              <table>
+                <tbody id="detailTable"></tbody>
+              </table>
+            </div>
+            <div>
+              <h3>批量 CSV</h3>
+              <p class="subtle">列名：marketplace,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band。season 填 offPeak 或 peak；仓储利用率周数没有后台数据时填 0。</p>
+              <textarea id="batchInput" spellcheck="false">marketplace,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
+US,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
+JP,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455
+DE,peak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
+              <div class="actions" style="margin-top:10px;">
+                <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden">
+                <button class="ghost" id="importCsvBtn">导入 CSV</button>
+                <button class="ghost" id="downloadTemplateBtn">下载模板</button>
+                <button class="secondary" id="batchBtn">批量计算</button>
+                <button class="ghost" id="downloadCsvBtn">下载 CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap hidden" id="batchWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>站点</th><th>月份</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">总费用</th><th>说明</th>
+                </tr>
+              </thead>
+              <tbody id="batchTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>费率表</h2>
+          <div class="actions">
+            <input id="rateJsonInput" type="file" accept=".json,application/json" class="hidden">
+            <button class="secondary" id="importRatesBtn">导入费率 JSON</button>
+            <button class="secondary" id="exportRatesBtn">导出费率 JSON</button>
+            <button class="ghost" id="restoreRatesBtn">恢复默认</button>
+          </div>
+        </div>
+        <div class="panel-body stack">
+          <div class="notice">
+            当前已预置 US、CA、MX、UK、DE、FR、IT、ES、NL、SE、PL、BE、JP、AU、IN、AE、SA、EG 的月仓储基础费；SG、TR、BR 已登记官方链接和计量单位，但具体费率仍为待补。可在月仓储表格中手动填写，或通过“导入费率 JSON”批量导入。
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-rate-tab="monthly">月仓储</button>
+            <button class="tab" data-rate-tab="season">淡旺季对比</button>
+            <button class="tab" data-rate-tab="utilization">仓储利用率</button>
+            <button class="tab" data-rate-tab="aged">库龄附加</button>
+            <button class="tab" data-rate-tab="sources">官方链接</button>
+          </div>
+
+          <div id="monthlyTab" class="table-wrap"></div>
+          <div id="seasonTab" class="table-wrap hidden"></div>
+          <div id="utilizationTab" class="table-wrap hidden"></div>
+          <div id="agedTab" class="table-wrap hidden"></div>
+          <div id="sourcesTab" class="source-list hidden"></div>
+        </div>
+      </section>
+    </section>
+  </div>
+</main>
+
+<script>
+const MARKETPLACES = [
+  ["North America","US","USD","ft3","Monthly inventory storage fees","https://sellercentral.amazon.com/help/hub/reference/external/G3EDYEF6KUCFQTNM","Current US monthly FBA storage fee page"],
+  ["North America","CA","CAD","m3","Inventory storage fees","https://sellercentral.amazon.ca/help/hub/reference/external/G200612770","Current Canada FBA storage fee page; includes base monthly storage and storage utilization surcharge in CAD/m3"],
+  ["North America","MX","MXN","m3","Inventory storage fees","https://sellercentral.amazon.com.mx/help/hub/reference/external/G200612770","Current Mexico FBA storage fee page; public pricing page lists MXN/dm3, converted to MXN/m3"],
+  ["Europe","UK","GBP","ft3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=en-GB","Europe/UK shared Seller Central storage fee page"],
+  ["Europe","DE","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=de-DE","Europe shared Seller Central storage fee page"],
+  ["Europe","FR","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=fr-FR","Europe shared Seller Central storage fee page"],
+  ["Europe","IT","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=it-IT","Europe shared Seller Central storage fee page"],
+  ["Europe","ES","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=es-ES","Europe shared Seller Central storage fee page"],
+  ["Europe","NL","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=en-GB","Europe shared Seller Central storage fee page; use marketplace mapping for NL"],
+  ["Europe","SE","SEK","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=en-GB","Europe shared Seller Central storage fee page; use marketplace mapping for SE"],
+  ["Europe","PL","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=pl-PL","Europe shared Seller Central storage fee page; EU rate card lists PL storage in EUR/m3"],
+  ["Europe","BE","EUR","m3","Monthly storage fees","https://sellercentral-europe.amazon.com/help/hub/reference/external/G200612770?locale=fr-FR","Europe shared Seller Central storage fee page; BE normally shown in FR/NL language"],
+  ["Asia-Pacific","JP","JPY","m3","Inventory storage fees","https://sellercentral.amazon.co.jp/gp/help/external/G200612770","Current Japan FBA storage fee page; public pricing page lists JPY per 10cm x 10cm x 10cm, converted to JPY/m3"],
+  ["Asia-Pacific","AU","AUD","m3","Inventory storage fees","https://sellercentral.amazon.com.au/help/hub/reference/external/G200612770","Current Australia FBA storage fee page"],
+  ["Asia-Pacific","SG","SGD","m3","Inventory storage fees","https://sellercentral.amazon.sg/help/hub/reference/external/G200612770","Current Singapore FBA storage fee page"],
+  ["Asia-Pacific","IN","INR","ft3","Inventory storage fees","https://sellercentral.amazon.in/help/hub/reference/external/G200612770","Current India FBA storage fee page; public pricing page lists INR/ft3"],
+  ["Middle East","AE","AED","ft3","Inventory storage fees","https://sellercentral.amazon.ae/help/hub/reference/external/G200612770","Current UAE FBA storage fee page; public pricing page lists AED/ft3"],
+  ["Middle East","SA","SAR","ft3","Monthly inventory storage fees","https://sellercentral.amazon.sa/help/hub/reference/external/G200612770","Current Saudi Arabia FBA storage fee page; public pricing page lists SAR/ft3"],
+  ["Middle East","EG","EGP","ft3","Inventory storage fees","https://sellercentral.amazon.eg/help/hub/reference/external/G200612770","Current Egypt FBA storage fee page; public pricing page lists EGP/ft3"],
+  ["Other","TR","TRY","m3","Inventory storage fees","https://sellercentral.amazon.com.tr/help/hub/reference/external/G200612770","Current Turkey FBA storage fee page"],
+  ["Other","BR","BRL","m3","Inventory storage fees","https://sellercentral.amazon.com.br/help/hub/reference/external/G200612770","Current Brazil FBA storage fee page"]
+].map(([region, code, currency, unit, pageType, url, notes]) => ({ region, code, currency, unit, pageType, url, notes }));
+
+const SIZE_RULES = {
+  US: { label: "US standard-size", maxLongestCm: 45.72, maxMedianCm: 35.56, maxShortestCm: 20.32, maxWeightKg: 9.07185, source: "US: <= 18 x 14 x 8 in and <= 20 lb" },
+  CA: { label: "CA envelope/standard", maxLongestCm: 45, maxMedianCm: 35, maxShortestCm: 20, maxWeightKg: 9, source: "CA: envelope/standard <= 45 x 35 x 20 cm and <= 9 kg" },
+  MX: { label: "MX standard", maxLongestCm: 45, maxMedianCm: 35, maxShortestCm: 20, maxWeightKg: Infinity, source: "MX: standard <= 45 x 35 x 20 cm" },
+  JP: { label: "JP small/standard", maxDimensionSumCm: 100, maxWeightKg: 9, source: "JP: small/standard grouped as standard storage when sum of dimensions <= 100 cm and <= 9 kg" },
+  AU: { label: "AU parcel-or-smaller", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 20, maxWeightKg: 12, source: "AU: envelope/parcel <= 45 x 34 x 20 cm and <= 12 kg" },
+  UK: { label: "EU/UK parcel-or-smaller", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU/UK: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  DE: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  FR: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  IT: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  ES: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  NL: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  SE: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  PL: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  BE: { label: "EU standard", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "EU: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  AE: { label: "MENA parcel-or-smaller", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "MENA: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  SA: { label: "MENA parcel-or-smaller", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "MENA: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  EG: { label: "MENA parcel-or-smaller", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "MENA: envelope/standard parcel <= 45 x 34 x 26 cm and <= 12 kg" },
+  DEFAULT: { label: "通用标准尺寸", maxLongestCm: 45, maxMedianCm: 34, maxShortestCm: 26, maxWeightKg: 12, source: "Fallback: <= 45 x 34 x 26 cm and <= 12 kg; verify against local Seller Central when fee rates are filled" }
+};
+
+const SEASON_WINDOWS = {
+  IN: {
+    offPeak: "全年统一",
+    peak: "全年统一",
+    note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
+  },
+  AE: {
+    offPeak: "全年统一",
+    peak: "全年统一",
+    note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
+  },
+  SA: {
+    offPeak: "全年统一",
+    peak: "全年统一",
+    note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
+  },
+  EG: {
+    offPeak: "全年统一",
+    peak: "全年统一",
+    note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
+  },
+  DEFAULT: {
+    offPeak: "1-9月",
+    peak: "10-12月",
+    note: "多数公开费率卡按 Jan-Sep / Oct-Dec 切分；未填官方费率的站点需按 Seller Central 页面最终确认。"
+  }
+};
+
+const STORAGE_CATEGORY_REQUIREMENTS = {
+  US: {
+    required: true,
+    note: "US 超龄库存 181-270 天需区分服装、鞋包、珠宝、手表等豁免类目；基础月仓储费不按类目变化。"
+  },
+  CA: {
+    required: true,
+    note: "CA 超龄库存 181-270 天需区分服装、鞋靴、箱包、珠宝首饰和钟表等豁免类目；基础月仓储费和仓储利用率不按类目变化。"
+  },
+  JP: {
+    required: true,
+    note: "JP 需要区分普通类目与服装/时尚配件、鞋靴/箱包。"
+  }
+};
+["UK", "DE", "FR", "IT", "ES", "NL", "SE", "PL", "BE"].forEach(code => {
+  STORAGE_CATEGORY_REQUIREMENTS[code] = {
+    required: true,
+    note: "UK/EU 需要区分普通类目与服装、眼镜、鞋靴和箱包。"
+  };
+});
+
+const STORAGE_CATEGORY_LABELS = {
+  default: "普通类目",
+  us_aged_exempt: "US/CA 服装/鞋包/珠宝/手表（181-270 天超龄费豁免）",
+  jp_fashion: "JP 服装/时尚配件、鞋靴/箱包",
+  eu_fashion: "UK/EU 服装、眼镜、鞋靴和箱包"
+};
+
+const ADDITIONAL_FEE_SOURCES = {
+  US: [
+    ["US 超龄库存附加费", "https://sellercentral.amazon.com/help/hub/reference/external/GJQNPA23YWVA4SBD", "2026-01-16 起的 aged inventory surcharge"]
+  ],
+  CA: [
+    ["CA 超龄库存附加费", "https://sellercentral.amazon.ca/help/hub/reference/external/200684750", "2025-05-15 起的 aged inventory surcharge"],
+    ["CA 基础月仓储费、仓储利用率附加费", "https://sellercentral.amazon.ca/help/hub/reference/external/G200612770", "同一页面包含 base monthly storage 与 storage utilization surcharge"]
+  ],
+  MX: [
+    ["MX 超龄库存附加费", "https://sellercentral.amazon.com.mx/help/hub/reference/external/G200684750", "aged inventory surcharge"]
+  ],
+  JP: [
+    ["JP 基础月仓储费、仓储利用率附加费", "https://sellercentral.amazon.co.jp/help/hub/reference/external/200612770#mnd_2jc_jcb", "2025-06-01 起"],
+    ["JP 超龄库存附加费", "https://sellercentral.amazon.co.jp/help/hub/reference/external/GMXDT9ELPWWDMDTY", "2026-04-15 起"]
+  ],
+  AE: [
+    ["AE 亚马逊物流长期仓储费", "https://sellercentral.amazon.ae/help/hub/reference/external/200684750", "2026-01-15 起"]
+  ],
+  SA: [
+    ["SA 亚马逊物流长期仓储费", "https://sellercentral.amazon.sa/help/hub/reference/external/200684750", "2026-01-15 起"]
+  ],
+  AU: [
+    ["AU 超龄库存附加费", "https://sellercentral.amazon.com.au/help/hub/reference/external/G200684750", "2025-09-15 起"]
+  ]
+};
+
+const BASE_RATE_TEMPLATE = {
+  monthly: {},
+  aged: {},
+  utilization: {}
+};
+
+function makeDefaults() {
+  const rates = structuredClone(BASE_RATE_TEMPLATE);
+  const euEuroMarkets = new Set(["DE", "FR", "IT", "ES", "NL", "PL", "BE"]);
+  MARKETPLACES.forEach(mp => {
+    const monthlyDefaults = {
+      status: "needs_official_check",
+      note: "已登记官方页面链接，但未写入默认费率；请在费率表中填入该站点官方费率后计算。",
+      standard: { offPeak: 0, peak: 0 },
+      oversize: { offPeak: 0, peak: 0 },
+      hazmatStandard: { offPeak: 0, peak: 0 },
+      hazmatOversize: { offPeak: 0, peak: 0 },
+      categoryOverrides: {}
+    };
+    if (mp.code === "US") {
+      Object.assign(monthlyDefaults, {
+        status: "official_rate_card_2026_05_02",
+        note: "US MCF/FBA storage rate card as of 2026-05-02.",
+        standard: { offPeak: 0.78, peak: 2.40 },
+        oversize: { offPeak: 0.56, peak: 1.40 },
+        hazmatStandard: { offPeak: 0.99, peak: 3.63 },
+        hazmatOversize: { offPeak: 0.78, peak: 2.43 }
+      });
+    } else if (mp.code === "CA") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page",
+        note: "Canada public pricing page lists monthly FBA storage in CAD per cubic metre. No separate dangerous-goods table was found on the public pricing page, so dangerous-goods fields mirror base storage rates.",
+        standard: { offPeak: 40, peak: 77 },
+        oversize: { offPeak: 28, peak: 49 },
+        hazmatStandard: { offPeak: 40, peak: 77 },
+        hazmatOversize: { offPeak: 28, peak: 49 }
+      });
+    } else if (mp.code === "MX") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page_dm3_converted",
+        note: "Mexico public FBA page lists rates in MXN per dm3; values here are converted to MXN per m3. No separate dangerous-goods table was found on the public pricing page, so dangerous-goods fields mirror base storage rates.",
+        standard: { offPeak: 360, peak: 530 },
+        oversize: { offPeak: 190, peak: 430 },
+        hazmatStandard: { offPeak: 360, peak: 530 },
+        hazmatOversize: { offPeak: 190, peak: 430 }
+      });
+    } else if (mp.code === "UK") {
+      Object.assign(monthlyDefaults, {
+        status: "official_rate_card_2025_02_01",
+        note: "UK/EU MCF/FBA storage rate card effective 2025-02-01; default category is All other categories, GBP per cubic foot.",
+        standard: { offPeak: 0.76, peak: 1.37 },
+        oversize: { offPeak: 0.50, peak: 0.79 },
+        hazmatStandard: { offPeak: 0.74, peak: 1.18 },
+        hazmatOversize: { offPeak: 0.64, peak: 1.01 },
+        categoryOverrides: {
+          eu_fashion: {
+            note: "UK/EU MCF/FBA storage rate card effective 2025-02-01; Clothing, Eyewear, Shoes and Bags rates, GBP per cubic foot.",
+            standard: { offPeak: 0.56, peak: 0.75 },
+            oversize: { offPeak: 0.56, peak: 0.75 },
+            hazmatStandard: { offPeak: 0.56, peak: 0.75 },
+            hazmatOversize: { offPeak: 0.56, peak: 0.75 }
+          }
+        }
+      });
+    } else if (euEuroMarkets.has(mp.code)) {
+      Object.assign(monthlyDefaults, {
+        status: "official_eu_rate_card_2025_05_15",
+        note: "EU FBA storage rate card; default category is All other categories, EUR per cubic metre. Use the storage category input for Clothing, Eyewear, Shoes and Bags.",
+        standard: { offPeak: 27.54, peak: 47.45 },
+        oversize: { offPeak: 19.80, peak: 31.35 },
+        hazmatStandard: { offPeak: 30.00, peak: 45.92 },
+        hazmatOversize: { offPeak: 25.00, peak: 39.90 },
+        categoryOverrides: {
+          eu_fashion: {
+            note: "EU FBA storage rate card lists Clothing, Eyewear, Shoes and Bags rates in EUR per cubic metre.",
+            standard: { offPeak: 18.17, peak: 26.58 },
+            oversize: { offPeak: 18.17, peak: 26.58 },
+            hazmatStandard: { offPeak: 18.17, peak: 26.58 },
+            hazmatOversize: { offPeak: 18.17, peak: 26.58 }
+          }
+        }
+      });
+    } else if (mp.code === "SE") {
+      Object.assign(monthlyDefaults, {
+        status: "official_eu_rate_card_2025_05_15",
+        note: "EU FBA storage rate card; default category is All other categories, SEK per cubic metre. Use the storage category input for Clothing, Eyewear, Shoes and Bags.",
+        standard: { offPeak: 321.31, peak: 498.34 },
+        oversize: { offPeak: 189.00, peak: 299.82 },
+        hazmatStandard: { offPeak: 315.00, peak: 482.72 },
+        hazmatOversize: { offPeak: 263.00, peak: 419.52 },
+        categoryOverrides: {
+          eu_fashion: {
+            note: "EU FBA storage rate card lists Clothing, Eyewear, Shoes and Bags rates in SEK per cubic metre.",
+            standard: { offPeak: 212.36, peak: 279.34 },
+            oversize: { offPeak: 212.36, peak: 279.34 },
+            hazmatStandard: { offPeak: 212.36, peak: 279.34 },
+            hazmatOversize: { offPeak: 212.36, peak: 279.34 }
+          }
+        }
+      });
+    } else if (mp.code === "JP") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page_1000cm3_converted",
+        note: "Japan public pricing page lists non-clothing/shoes-bags storage rates per 10cm x 10cm x 10cm; values here are converted to JPY per m3. Use the storage category input for Clothing & Fashion Accessories, Shoes & Bags.",
+        standard: { offPeak: 5676, peak: 10087 },
+        oversize: { offPeak: 3278, peak: 6984 },
+        hazmatStandard: { offPeak: 5676, peak: 10087 },
+        hazmatOversize: { offPeak: 3278, peak: 6984 },
+        categoryOverrides: {
+          jp_fashion: {
+            note: "Japan public pricing page lists Clothing & Fashion Accessories, Shoes & Bags at JPY 3.10 / 5.50 per 10cm x 10cm x 10cm; values here are converted to JPY per m3.",
+            standard: { offPeak: 3100, peak: 5500 },
+            oversize: { offPeak: 3100, peak: 5500 },
+            hazmatStandard: { offPeak: 3100, peak: 5500 },
+            hazmatOversize: { offPeak: 3100, peak: 5500 }
+          }
+        }
+      });
+    } else if (mp.code === "AU") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page",
+        note: "Australia public pricing page lists monthly FBA storage in AUD per cubic metre. No separate dangerous-goods table was found on the public pricing page, so dangerous-goods fields mirror base storage rates.",
+        standard: { offPeak: 37.00, peak: 51.80 },
+        oversize: { offPeak: 34.20, peak: 48.00 },
+        hazmatStandard: { offPeak: 37.00, peak: 51.80 },
+        hazmatOversize: { offPeak: 34.20, peak: 48.00 }
+      });
+    } else if (mp.code === "IN") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page_flat",
+        note: "India public fees page lists FC storage fee as INR 50 per cubic foot per month; public page does not split by season or size tier.",
+        standard: { offPeak: 50, peak: 50 },
+        oversize: { offPeak: 50, peak: 50 },
+        hazmatStandard: { offPeak: 50, peak: 50 },
+        hazmatOversize: { offPeak: 50, peak: 50 }
+      });
+    } else if (mp.code === "AE") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page_flat",
+        note: "UAE public pricing page lists monthly storage as AED 2 per cubic foot per month; public page does not split by season or size tier.",
+        standard: { offPeak: 2, peak: 2 },
+        oversize: { offPeak: 2, peak: 2 },
+        hazmatStandard: { offPeak: 2, peak: 2 },
+        hazmatOversize: { offPeak: 2, peak: 2 }
+      });
+    } else if (mp.code === "SA") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page_flat",
+        note: "Saudi Arabia public pricing page lists monthly storage as SAR 3 per cubic foot per month; public page does not split by season or size tier.",
+        standard: { offPeak: 3, peak: 3 },
+        oversize: { offPeak: 3, peak: 3 },
+        hazmatStandard: { offPeak: 3, peak: 3 },
+        hazmatOversize: { offPeak: 3, peak: 3 }
+      });
+    } else if (mp.code === "EG") {
+      Object.assign(monthlyDefaults, {
+        status: "official_pricing_page_flat",
+        note: "Egypt public pricing page lists monthly storage as EGP 4 per cubic foot per month; public page does not split by season or size tier.",
+        standard: { offPeak: 4, peak: 4 },
+        oversize: { offPeak: 4, peak: 4 },
+        hazmatStandard: { offPeak: 4, peak: 4 },
+        hazmatOversize: { offPeak: 4, peak: 4 }
+      });
+    }
+    rates.monthly[mp.code] = {
+      ...monthlyDefaults
+    };
+    rates.aged[mp.code] = {
+      status: mp.code === "US" ? "official_sellercentral_2026_01_16" : "needs_official_check",
+      byVolume: {
+        none: 0,
+        "0_90": 0,
+        "91_180": 0,
+        "181_210": mp.code === "US" ? 0.50 : 0,
+        "211_240": mp.code === "US" ? 1.00 : 0,
+        "241_270": mp.code === "US" ? 1.50 : 0,
+        "271_300": mp.code === "US" ? 5.45 : 0,
+        "301_330": mp.code === "US" ? 5.70 : 0,
+        "331_365": mp.code === "US" ? 5.90 : 0,
+        "366_455": mp.code === "US" ? 6.90 : 0,
+        "456_plus": mp.code === "US" ? 7.90 : 0
+      },
+      perUnitMinimum365: 0,
+      perUnitMinimumByBand: mp.code === "US" ? {
+        "366_455": 0.30,
+        "456_plus": 0.35
+      } : {}
+    };
+    rates.utilization[mp.code] = {
+      status: "not_applicable_or_not_loaded",
+      note: "仓储利用率附加费需填写 Seller Central 的 storage utilization ratio；默认不计。",
+      thresholds: []
+    };
+    if (mp.code === "US") {
+      rates.utilization[mp.code] = {
+        status: "official_sellercentral",
+        note: "Applies to professional sellers above 22 weeks; excludes new sellers and some low-volume inventory.",
+        thresholds: [
+          { min: 22, max: 28, standard: 0.44, oversize: 0.23 },
+          { min: 28, max: 36, standard: 0.76, oversize: 0.46 },
+          { min: 36, max: 44, standard: 1.16, oversize: 0.63 },
+          { min: 44, max: 52, standard: 1.58, oversize: 0.76 },
+          { min: 52, max: Infinity, standard: 1.88, oversize: 1.26 }
+        ]
+      };
+    }
+    if (mp.code === "CA") {
+      rates.utilization[mp.code] = {
+        status: "official_sellercentral",
+        note: "Applies above 22 weeks for eligible professional sellers; rates are CAD per cubic metre and apply to inventory aged over 30 days.",
+        thresholds: [
+          { min: 22, max: 28, standard: 33, oversize: 13 },
+          { min: 28, max: 36, standard: 55, oversize: 25 },
+          { min: 36, max: 44, standard: 90, oversize: 39 },
+          { min: 44, max: 52, standard: 103, oversize: 55 },
+          { min: 52, max: Infinity, standard: 135, oversize: 90 }
+        ]
+      };
+    }
+    if (mp.code === "UK") {
+      rates.utilization[mp.code] = {
+        status: "official_rate_card_2025_05_15",
+        note: "Applies above 22 weeks; excludes clothing, eyewear, shoes and bags categories.",
+        thresholds: [
+          { min: 22, max: 28, standard: 0.42, oversize: 0.12 },
+          { min: 28, max: 36, standard: 0.78, oversize: 0.25 },
+          { min: 36, max: 44, standard: 1.04, oversize: 0.45 },
+          { min: 44, max: 52, standard: 1.41, oversize: 0.62 },
+          { min: 52, max: Infinity, standard: 2.29, oversize: 0.81 }
+        ]
+      };
+    }
+    if (["DE", "FR", "IT", "ES"].includes(mp.code)) {
+      rates.utilization[mp.code] = {
+        status: "official_rate_card_2025_05_15",
+        note: "Applies above 22 weeks; excludes clothing, eyewear, shoes and bags categories.",
+        thresholds: [
+          { min: 22, max: 28, standard: 14.85, oversize: 4.29 },
+          { min: 28, max: 36, standard: 27.05, oversize: 7.92 },
+          { min: 36, max: 44, standard: 37.61, oversize: 13.37 },
+          { min: 44, max: 52, standard: 46.55, oversize: 17.33 },
+          { min: 52, max: Infinity, standard: 76.87, oversize: 23.10 }
+        ]
+      };
+    }
+    if (mp.code === "JP") {
+      rates.utilization[mp.code] = {
+        status: "official_sellercentral_2025_06_01",
+        note: "Applies above 26 weeks; values converted from JPY per 10cm x 10cm x 10cm to JPY per m3.",
+        thresholds: [
+          { min: 26, max: 39, standard: 1462, oversize: 316, jp_fashion: 817 },
+          { min: 39, max: 52, standard: 3997, oversize: 1023, jp_fashion: 3645 },
+          { min: 52, max: Infinity, standard: 16762, oversize: 3842, jp_fashion: 10370 }
+        ]
+      };
+    };
+    if (mp.code === "MX") {
+      rates.aged[mp.code] = {
+        status: "official_pricing_page_dm3_converted",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 300,
+          "211_240": 600,
+          "241_270": 900,
+          "271_300": 2560,
+          "301_330": 2730,
+          "331_365": 2820,
+          "366_455": 4760,
+          "456_plus": 4760
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: { "366_455": 2.32, "456_plus": 2.32 }
+      };
+    }
+    if (mp.code === "AU") {
+      rates.aged[mp.code] = {
+        status: "official_pricing_page",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 0,
+          "211_240": 0,
+          "241_270": 0,
+          "271_300": 155,
+          "301_330": 175,
+          "331_365": 185,
+          "366_455": 370,
+          "456_plus": 370
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: { "366_455": 0.12, "456_plus": 0.12 }
+      };
+    }
+    if (mp.code === "CA") {
+      rates.aged[mp.code] = {
+        status: "official_sellercentral_2025_05_15",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 24,
+          "211_240": 48,
+          "241_270": 72,
+          "271_300": 156,
+          "301_330": 172,
+          "331_365": 189,
+          "366_455": 330,
+          "456_plus": 330
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: { "366_455": 0.15, "456_plus": 0.15 }
+      };
+    }
+    if (["AE", "SA"].includes(mp.code)) {
+      rates.aged[mp.code] = {
+        status: "official_sellercentral_2026_01_15",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 0,
+          "211_240": 0,
+          "241_270": 0,
+          "271_300": 8,
+          "301_330": 8,
+          "331_365": 8,
+          "366_455": 30,
+          "456_plus": 30
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: {}
+      };
+    }
+    if (["UK", "DE", "FR", "IT", "ES"].includes(mp.code)) {
+      const isUk = mp.code === "UK";
+      rates.aged[mp.code] = {
+        status: "official_rate_card_2025_05_15",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 0,
+          "211_240": 0,
+          "241_270": isUk ? 1.18 : 47.99,
+          "271_300": isUk ? 3.14 : 125.16,
+          "301_330": isUk ? 3.26 : 129.92,
+          "331_365": isUk ? 3.41 : 135.98,
+          "366_455": isUk ? 5.71 : 227.63,
+          "456_plus": isUk ? 5.71 : 227.63
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: {}
+      };
+    }
+    if (mp.code === "JP") {
+      rates.aged[mp.code] = {
+        status: "official_sellercentral_2026_04_15",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 0,
+          "211_240": 0,
+          "241_270": 0,
+          "271_300": 16662,
+          "301_330": 17475,
+          "331_365": 18085,
+          "366_455": 34239,
+          "456_plus": 34239
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: { "366_455": 20, "456_plus": 20 }
+      };
+    }
+  });
+  return rates;
+}
+
+let RATES = loadRates();
+let lastResult = null;
+let lastBatchRows = [];
+
+const els = Object.fromEntries([
+  "marketplace","seasonBand","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","billingUnit","length","width","height","weightKg",
+  "storageDays","utilizationWeeks","daysInMonth","units",
+  "ageBand","sourceBadge","dataNotice","baseFee","utilizationFee","agedFee","totalFee","baseRateText",
+  "utilizationRateText","agedRateText","perUnitText","formulaText","detailTable","batchInput","batchWrap","batchTable"
+].map(id => [id, document.getElementById(id)]));
+
+const BATCH_TEMPLATE = `marketplace,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
+US,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
+JP,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
+
+function loadRates() {
+  try {
+    const stored = localStorage.getItem("amazon_storage_fee_rates_v7");
+    if (stored) return mergeRates(makeDefaults(), JSON.parse(stored));
+  } catch {}
+  return makeDefaults();
+}
+
+function saveRates() {
+  localStorage.setItem("amazon_storage_fee_rates_v7", JSON.stringify(RATES));
+}
+
+function mergeRates(base, patch) {
+  Object.keys(patch || {}).forEach(group => {
+    Object.keys(patch[group] || {}).forEach(market => {
+      base[group][market] = { ...(base[group][market] || {}), ...patch[group][market] };
+    });
+  });
+  return base;
+}
+
+function fmtMoney(value, currency) {
+  if (!Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("zh-CN", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+}
+
+function fmtNum(value, digits = 4) {
+  if (!Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: digits }).format(value);
+}
+
+function getMarket(code = els.marketplace.value) {
+  return MARKETPLACES.find(mp => mp.code === code) || MARKETPLACES[0];
+}
+
+function normalizeSeason(value) {
+  if (value === "peak" || value === "旺季") return "peak";
+  return "offPeak";
+}
+
+function seasonLabel(value) {
+  return normalizeSeason(value) === "peak" ? "旺季" : "淡季";
+}
+
+function normalizeStorageCategory(mpCode, value) {
+  const normalized = String(value || "default").trim();
+  if (["US", "CA"].includes(mpCode) && ["us_aged_exempt", "clothing", "shoes_bags", "jewelry", "watches", "apparel", "shoes", "bags", "服装鞋包", "服装", "鞋靴", "箱包", "珠宝", "手表"].includes(normalized)) return "us_aged_exempt";
+  if (mpCode === "JP" && ["jp_fashion", "fashion", "apparel", "clothing", "shoes_bags", "服装鞋包", "服装", "鞋包"].includes(normalized)) return "jp_fashion";
+  if (["UK", "DE", "FR", "IT", "ES", "NL", "SE", "PL", "BE"].includes(mpCode) && ["eu_fashion", "fashion", "apparel", "clothing", "eyewear", "shoes_bags", "服装鞋包", "服装", "眼镜", "鞋包", "箱包"].includes(normalized)) return "eu_fashion";
+  return "default";
+}
+
+function storageCategoryLabel(mpCode, value) {
+  return STORAGE_CATEGORY_LABELS[normalizeStorageCategory(mpCode, value)] || STORAGE_CATEGORY_LABELS.default;
+}
+
+function categoryRequirement(mpCode) {
+  return STORAGE_CATEGORY_REQUIREMENTS[mpCode] || { required: false, note: "当前站点无需提供仓储类目。" };
+}
+
+function ageBandLabel(value) {
+  const labels = {
+    "0_90": "0-90 天（含 90）",
+    "91_180": "91-180 天（含 180）",
+    "181_210": "181-210 天（含 210）",
+    "211_240": "211-240 天（含 240）",
+    "241_270": "241-270 天（含 270）",
+    "271_300": "271-300 天（含 300）",
+    "301_330": "301-330 天（含 330）",
+    "331_365": "331-365 天（含 365）",
+    "366_455": "366-455 天（含 455）",
+    "456_plus": "456 天以上（不含 455）"
+  };
+  return labels[normalizeAgeBand(value)] || labels["0_90"];
+}
+
+function billingUnitFor(mp, selected = els.billingUnit.value) {
+  return selected === "auto" ? mp.unit : selected;
+}
+
+function volumeFromDims(length, width, height, dimUnit, billUnit) {
+  const l = Number(length), w = Number(width), h = Number(height);
+  if (![l, w, h].every(v => Number.isFinite(v) && v >= 0)) return 0;
+  const m3 = (l * w * h) / 1000000;
+  return billUnit === "ft3" ? m3 * 35.3146667215 : m3;
+}
+
+function sortedDimsCm(length, width, height) {
+  return [Number(length) || 0, Number(width) || 0, Number(height) || 0].sort((a, b) => b - a);
+}
+
+function classifySizeType(mpCode, length, width, height, weightKg) {
+  const [longest, median, shortest] = sortedDimsCm(length, width, height);
+  const rule = SIZE_RULES[mpCode] || SIZE_RULES.DEFAULT;
+  const dimensionSum = longest + median + shortest;
+  const weight = Number(weightKg) || 0;
+  const dimsOk = rule.maxDimensionSumCm !== undefined
+    ? dimensionSum <= rule.maxDimensionSumCm + 1e-9
+    : longest <= rule.maxLongestCm + 1e-9 && median <= rule.maxMedianCm + 1e-9 && shortest <= rule.maxShortestCm + 1e-9;
+  const weightOk = weight <= rule.maxWeightKg + 1e-9;
+  const type = dimsOk && weightOk ? "standard" : "oversize";
+  const ruleText = rule.maxDimensionSumCm !== undefined
+    ? `三边和 <= ${rule.maxDimensionSumCm} cm，重量 <= ${rule.maxWeightKg} kg`
+    : `最长/中间/最短边 <= ${rule.maxLongestCm}/${rule.maxMedianCm}/${rule.maxShortestCm} cm，重量 <= ${rule.maxWeightKg === Infinity ? "未限定" : `${rule.maxWeightKg} kg`}`;
+  const actualText = `实测 ${fmtNum(longest, 2)}/${fmtNum(median, 2)}/${fmtNum(shortest, 2)} cm，${fmtNum(weight, 3)} kg`;
+  return {
+    type,
+    label: type === "standard" ? "标准尺寸" : "大件/超大件",
+    detailLabel: rule.label,
+    reason: `${rule.source}；${actualText}；规则 ${ruleText}`,
+    longest,
+    median,
+    shortest,
+    dimensionSum,
+    weight
+  };
+}
+
+function rateKey(sizeType, hazmat) {
+  if (hazmat === "yes" && sizeType === "standard") return "hazmatStandard";
+  if (hazmat === "yes" && sizeType === "oversize") return "hazmatOversize";
+  return sizeType;
+}
+
+function monthlyRate(mpCode, seasonBand, sizeType, hazmat, storageCategory = "default") {
+  const row = RATES.monthly[mpCode];
+  const category = normalizeStorageCategory(mpCode, storageCategory);
+  const categoryRow = category === "default" || (category === "eu_fashion" && hazmat === "yes") ? null : row?.categoryOverrides?.[category];
+  const sourceRow = categoryRow || row;
+  const key = rateKey(sizeType, hazmat);
+  return Number(sourceRow?.[key]?.[normalizeSeason(seasonBand)] || 0);
+}
+
+function monthlyRateNote(mpCode, storageCategory = "default", hazmat = "no") {
+  const row = RATES.monthly[mpCode];
+  const category = normalizeStorageCategory(mpCode, storageCategory);
+  if (category === "eu_fashion" && hazmat === "yes") {
+    return `${row?.note || ""} Dangerous goods use the Hazmat storage column, even when the product is in a fashion category.`;
+  }
+  return category === "default" ? row?.note || "" : row?.categoryOverrides?.[category]?.note || row?.note || "";
+}
+
+function agedRate(mpCode, ageBand) {
+  return Number(RATES.aged[mpCode]?.byVolume?.[ageBand] || 0);
+}
+
+function normalizeAgeBand(value) {
+  if (!value || value === "none") return "0_90";
+  if (value === "365_plus") return "366_455";
+  return value;
+}
+
+function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
+  const row = RATES.utilization?.[mpCode];
+  const ratioWeeks = Number(weeks) || 0;
+  if (!row || ratioWeeks <= 0) return 0;
+  const category = normalizeStorageCategory(mpCode, storageCategory);
+  if (category === "eu_fashion") return 0;
+  const tier = (row.thresholds || []).find(item => ratioWeeks > item.min && ratioWeeks <= item.max);
+  if (!tier) return 0;
+  if (mpCode === "JP" && category === "jp_fashion") return Number(tier.jp_fashion || 0);
+  return Number(tier[sizeType] || 0);
+}
+
+function dayRatioFromInput(input) {
+  const days = Number(input.daysInMonth) || 30;
+  const storageDays = Number(input.storageDays) || 0;
+  return days > 0 ? storageDays / days : 0;
+}
+
+function calculate(input) {
+  const mp = getMarket(input.marketplace);
+  const storageCategory = normalizeStorageCategory(mp.code, input.storageCategory);
+  const billUnit = input.billingUnit === "auto" ? mp.unit : input.billingUnit;
+  const sizeDecision = classifySizeType(mp.code, input.length, input.width, input.height, input.weightKg);
+  const unitVolume = volumeFromDims(input.length, input.width, input.height, "cm", billUnit);
+  const units = Number(input.units) || 0;
+  const dayRatio = dayRatioFromInput(input);
+  const billableUnits = units * dayRatio;
+  const totalVolume = unitVolume * billableUnits;
+  const baseRate = monthlyRate(mp.code, input.seasonBand, sizeDecision.type, input.hazmat, storageCategory);
+  const ageBand = normalizeAgeBand(input.ageBand);
+  const agedByVolume = agedRate(mp.code, ageBand);
+  const utilizationByVolume = utilizationRate(mp.code, input.utilizationWeeks, sizeDecision.type, storageCategory);
+  const minPerUnit = Number(RATES.aged[mp.code]?.perUnitMinimumByBand?.[ageBand] ?? RATES.aged[mp.code]?.perUnitMinimum365 ?? 0);
+  const min365 = minPerUnit ? minPerUnit * billableUnits : 0;
+  const effectiveAgedByVolume = ["US", "CA"].includes(mp.code) && storageCategory === "us_aged_exempt" && ["181_210", "211_240", "241_270"].includes(ageBand) ? 0 : agedByVolume;
+  const baseFee = totalVolume * baseRate;
+  const utilizationFee = totalVolume * utilizationByVolume;
+  const agedFee = Math.max(totalVolume * effectiveAgedByVolume, min365);
+  const totalFee = baseFee + utilizationFee + agedFee;
+  return {
+    mp, billUnit, unitVolume, totalVolume, units, dayRatio, billableUnits, sizeDecision,
+    baseRate, utilizationByVolume, agedByVolume: effectiveAgedByVolume, min365, ageBand, storageCategory,
+    baseFee, utilizationFee, agedFee, totalFee,
+    costPerUnit: units ? totalFee / units : 0,
+    input
+  };
+}
+
+function currentInput() {
+  return {
+    marketplace: els.marketplace.value,
+    seasonBand: els.seasonBand.value,
+    storageCategory: els.storageCategory.value,
+    hazmat: els.hazmat.value,
+    billingUnit: els.billingUnit.value,
+    length: Number(els.length.value),
+    width: Number(els.width.value),
+    height: Number(els.height.value),
+    weightKg: Number(els.weightKg.value),
+    storageDays: Number(els.storageDays.value),
+    utilizationWeeks: Number(els.utilizationWeeks.value),
+    daysInMonth: Number(els.daysInMonth.value) || 30,
+    units: Number(els.units.value),
+    ageBand: normalizeAgeBand(els.ageBand.value)
+  };
+}
+
+function renderResult() {
+  lastResult = calculate(currentInput());
+  const r = lastResult;
+  els.sizeType.value = r.sizeDecision.type;
+  els.sizeTypeLabel.value = `${r.sizeDecision.label}（${r.sizeDecision.detailLabel}）`;
+  els.sourceBadge.textContent = `${r.mp.code} / ${r.mp.currency}`;
+  const requirement = categoryRequirement(r.mp.code);
+  els.categoryNotice.value = requirement.required ? requirement.note : "当前站点无需提供仓储类目";
+  els.storageCategory.disabled = !requirement.required;
+  if (!requirement.required && els.storageCategory.value !== "default") {
+    els.storageCategory.value = "default";
+  }
+  const status = RATES.monthly[r.mp.code]?.status;
+  const hasPresetRate = status && status !== "needs_official_check" && r.baseRate > 0;
+  els.dataNotice.className = hasPresetRate ? "notice ok" : "notice";
+  els.dataNotice.textContent = hasPresetRate
+    ? `当前站点已预置月仓储费率。状态：${status}。类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}。来源：${r.mp.pageType}，${monthlyRateNote(r.mp.code, r.storageCategory, r.input.hazmat)}`
+    : `当前站点只登记了官方链接，默认费率为 0；请在“费率表”补入官方数值后计算。来源：${r.mp.url}`;
+
+  els.baseFee.textContent = fmtMoney(r.baseFee, r.mp.currency);
+  els.utilizationFee.textContent = fmtMoney(r.utilizationFee, r.mp.currency);
+  els.agedFee.textContent = fmtMoney(r.agedFee, r.mp.currency);
+  els.totalFee.textContent = fmtMoney(r.totalFee, r.mp.currency);
+  els.baseRateText.textContent = `${seasonLabel(r.input.seasonBand)}：${fmtMoney(r.baseRate, r.mp.currency)} / ${r.billUnit}`;
+  els.utilizationRateText.textContent = r.input.utilizationWeeks > 0
+    ? `${fmtNum(r.input.utilizationWeeks, 1)} 周：${fmtMoney(r.utilizationByVolume, r.mp.currency)} / ${r.billUnit}`
+    : "未填写周数，默认不计";
+  els.agedRateText.textContent = `${fmtMoney(r.agedByVolume, r.mp.currency)} / ${r.billUnit}` + (r.min365 ? `，365+ 最低 ${fmtMoney(r.min365, r.mp.currency)}` : "");
+  els.perUnitText.textContent = `单件 ${fmtMoney(r.costPerUnit, r.mp.currency)}；${fmtNum(r.units, 0)} 件合计`;
+  els.formulaText.textContent = `${fmtNum(r.unitVolume, 6)} ${r.billUnit} x ${fmtNum(r.input.storageDays, 1)} / ${fmtNum(r.input.daysInMonth, 0)} x 费率`;
+
+  const rows = [
+    ["站点", `${r.mp.region} / ${r.mp.code}`],
+    ["计费季节", `${seasonLabel(r.input.seasonBand)}（具体月份见淡旺季对比表）`],
+    ["仓储类目", `${storageCategoryLabel(r.mp.code, r.storageCategory)}；${requirement.required ? "当前站点需要提供类目" : "当前站点无需提供类目"}`],
+    ["尺寸类型", `${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / 危险品" : ""}`],
+    ["尺寸判断依据", r.sizeDecision.reason],
+    ["库存库龄", ageBandLabel(r.ageBand)],
+    ["单品算法", `数量 ${fmtNum(r.units, 0)} × 存放 ${fmtNum(r.input.storageDays, 1)} 天 ÷ ${fmtNum(r.input.daysInMonth, 0)} 天 = 折算计费数量 ${fmtNum(r.billableUnits, 4)} 件`],
+    ["单件体积", `${fmtNum(r.unitVolume, 6)} ${r.billUnit}`],
+    ["折算计费体积", `${fmtNum(r.totalVolume, 4)} ${r.billUnit}`],
+    ["月仓储基础费公式", `${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.baseRate, 4)} = ${fmtMoney(r.baseFee, r.mp.currency)}`],
+    ["仓储利用率附加费公式", `${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.utilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
+    ["库龄附加费公式", `max(${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.agedByVolume, 4)}, ${fmtMoney(r.min365, r.mp.currency)}) = ${fmtMoney(r.agedFee, r.mp.currency)}`],
+    ["官方页面", `<a href="${r.mp.url}" target="_blank" rel="noopener">${r.mp.pageType}</a>`]
+  ];
+  els.detailTable.innerHTML = rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("");
+}
+
+function initSelectors() {
+  const grouped = MARKETPLACES.reduce((acc, mp) => {
+    acc[mp.region] ||= [];
+    acc[mp.region].push(mp);
+    return acc;
+  }, {});
+  els.marketplace.innerHTML = Object.entries(grouped).map(([region, items]) =>
+    `<optgroup label="${region}">${items.map(mp => `<option value="${mp.code}">${mp.code} (${mp.currency})</option>`).join("")}</optgroup>`
+  ).join("");
+  els.marketplace.value = "US";
+  els.seasonBand.value = "peak";
+}
+
+function renderRateTables() {
+  renderMonthlyTable();
+  renderSeasonTable();
+  renderUtilizationTable();
+  renderAgedTable();
+  renderSources();
+}
+
+function renderMonthlyTable() {
+  const rows = MARKETPLACES.map(mp => {
+    const r = RATES.monthly[mp.code];
+    return `<tr>
+      <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
+      ${["standard","oversize","hazmatStandard","hazmatOversize"].map(key =>
+        `<td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="offPeak" type="number" step="0.01" value="${r[key].offPeak}"></td>
+         <td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="peak" type="number" step="0.01" value="${r[key].peak}"></td>`
+      ).join("")}
+      <td class="subtle">${r.status}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("monthlyTab").innerHTML = `<table>
+    <thead><tr><th>站点</th><th>标准淡季</th><th>标准旺季</th><th>大件淡季</th><th>大件旺季</th><th>危险品标准淡季</th><th>危险品标准旺季</th><th>危险品大件淡季</th><th>危险品大件旺季</th><th>状态</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderSeasonTable() {
+  const rows = MARKETPLACES.map(mp => {
+    const r = RATES.monthly[mp.code];
+    const seasonInfo = SEASON_WINDOWS[mp.code] || SEASON_WINDOWS.DEFAULT;
+    const requirement = categoryRequirement(mp.code);
+    const rateText = value => Number(value) > 0 ? fmtMoney(Number(value), mp.currency) : "待补";
+    const categoryRates = Object.entries(r.categoryOverrides || {}).map(([category, row]) =>
+      `${STORAGE_CATEGORY_LABELS[category] || category}：标准 ${rateText(row.standard.offPeak)} / ${rateText(row.standard.peak)}，大件 ${rateText(row.oversize.offPeak)} / ${rateText(row.oversize.peak)}`
+    ).join("<br>");
+    return `<tr>
+      <td><strong>${mp.region}</strong></td>
+      <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
+      <td>${requirement.required ? "需要" : "无需"}<div class="subtle">${requirement.required ? requirement.note : "按站点费率计算"}</div></td>
+      <td>${seasonInfo.offPeak}</td>
+      <td>${seasonInfo.peak}</td>
+      <td class="num">${rateText(r.standard.offPeak)}</td>
+      <td class="num">${rateText(r.standard.peak)}</td>
+      <td class="num">${rateText(r.oversize.offPeak)}</td>
+      <td class="num">${rateText(r.oversize.peak)}</td>
+      <td class="subtle">${r.status}<br>${seasonInfo.note}${categoryRates ? `<br>${categoryRates}` : ""}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("seasonTab").innerHTML = `<table>
+    <thead><tr><th>区域</th><th>站点</th><th>类目要求</th><th>淡季月份</th><th>旺季月份</th><th class="num">标准淡季</th><th class="num">标准旺季</th><th class="num">大件淡季</th><th class="num">大件旺季</th><th>数据状态</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderAgedTable() {
+  const bands = ["0_90","91_180","181_210","211_240","241_270","271_300","301_330","331_365","366_455","456_plus"];
+  const labels = {"0_90":"0-90（含90）","91_180":"91-180（含180）","181_210":"181-210（含210）","211_240":"211-240（含240）","241_270":"241-270（含270）","271_300":"271-300（含300）","301_330":"301-330（含330）","331_365":"331-365（含365）","366_455":"366-455（含455）","456_plus":"456+（不含455）"};
+  const rows = MARKETPLACES.map(mp => {
+    const r = RATES.aged[mp.code];
+    return `<tr>
+      <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
+      ${bands.map(b => `<td><input data-rate="aged" data-market="${mp.code}" data-band="${b}" type="number" step="0.01" value="${r.byVolume[b]}"></td>`).join("")}
+      <td><input data-rate="agedMin" data-market="${mp.code}" type="number" step="0.01" value="${r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0}"></td>
+    </tr>`;
+  }).join("");
+  document.getElementById("agedTab").innerHTML = `<table>
+    <thead><tr><th>站点</th>${bands.map(b => `<th>${labels[b]}</th>`).join("")}<th>365+ 单件最低</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderUtilizationTable() {
+  const rows = MARKETPLACES.map(mp => {
+    const row = RATES.utilization?.[mp.code] || { thresholds: [], status: "not_loaded", note: "" };
+    const text = (item, key) => item ? fmtMoney(Number(item[key] || 0), mp.currency) : "待补";
+    const tier = (min, max) => (row.thresholds || []).find(item => item.min === min && item.max === max);
+    const tiers = [
+      [22, 28, "22<周数≤28"],
+      [28, 36, "28<周数≤36"],
+      [36, 44, "36<周数≤44"],
+      [44, 52, "44<周数≤52"],
+      [52, Infinity, "周数>52"],
+      [26, 39, "JP 26<周数≤39"],
+      [39, 52, "JP 39<周数≤52"]
+    ];
+    return `<tr>
+      <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
+      ${tiers.map(([min, max, label]) => {
+        const found = tier(min, max);
+        return `<td><strong>${label}</strong><div class="subtle">标准 ${text(found, "standard")} / 大件 ${text(found, "oversize")}${found?.jp_fashion ? `<br>JP服装 ${fmtMoney(found.jp_fashion, mp.currency)}` : ""}</div></td>`;
+      }).join("")}
+      <td class="subtle">${row.status}<br>${row.note}</td>
+    </tr>`;
+  }).join("");
+  document.getElementById("utilizationTab").innerHTML = `<table>
+    <thead><tr><th>站点</th><th>22-28</th><th>28-36</th><th>36-44</th><th>44-52</th><th>52+</th><th>JP 26-39</th><th>JP 39-52</th><th>状态</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderSources() {
+  document.getElementById("sourcesTab").innerHTML = MARKETPLACES.map(mp => `
+    <div class="source-item">
+      <strong>${mp.region} / ${mp.code} / ${mp.pageType}</strong>
+      <a href="${mp.url}" target="_blank" rel="noopener">${mp.url}</a>
+      ${(ADDITIONAL_FEE_SOURCES[mp.code] || []).map(([label, url, note]) => `
+        <span class="subtle"><strong>${label}</strong>：<a href="${url}" target="_blank" rel="noopener">${url}</a>；${note}</span>
+      `).join("")}
+      <span class="subtle">类目要求：${categoryRequirement(mp.code).required ? categoryRequirement(mp.code).note : "无需提供仓储类目"}</span>
+      <span class="subtle">${mp.notes}</span>
+    </div>
+  `).join("");
+}
+
+function applyRateEdit(input) {
+  const v = Number(input.value) || 0;
+  const market = input.dataset.market;
+  if (input.dataset.rate === "monthly") {
+    RATES.monthly[market][input.dataset.key][input.dataset.season] = v;
+    RATES.monthly[market].status = v > 0 ? "user_edited" : RATES.monthly[market].status;
+  }
+  if (input.dataset.rate === "aged") {
+    RATES.aged[market].byVolume[input.dataset.band] = v;
+    RATES.aged[market].status = v > 0 ? "user_edited" : RATES.aged[market].status;
+  }
+  if (input.dataset.rate === "agedMin") {
+    RATES.aged[market].perUnitMinimum365 = v;
+  }
+  saveRates();
+  renderResult();
+}
+
+function parseCsvLine(line) {
+  const cells = [];
+  let cur = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; continue; }
+    if (ch === '"') { quoted = !quoted; continue; }
+    if (ch === "," && !quoted) { cells.push(cur); cur = ""; continue; }
+    cur += ch;
+  }
+  cells.push(cur);
+  return cells.map(c => c.trim());
+}
+
+function batchCalculate() {
+  const lines = els.batchInput.value.split(/\r?\n/).filter(Boolean);
+  const headers = parseCsvLine(lines.shift() || "").map(h => h.trim());
+  lastBatchRows = lines.map(line => {
+    const row = Object.fromEntries(parseCsvLine(line).map((v, i) => [headers[i], v]));
+    const result = calculate({
+      marketplace: row.marketplace || "US",
+      seasonBand: normalizeSeason(row.season || row.season_band || "offPeak"),
+      storageCategory: row.storage_category || row.category || "default",
+      hazmat: row.hazmat || "no",
+      billingUnit: "auto",
+      length: Number(row.length_cm || row.length || 0),
+      width: Number(row.width_cm || row.width || 0),
+      height: Number(row.height_cm || row.height || 0),
+      weightKg: Number(row.weight_kg || 0),
+      units: Number(row.quantity || row.units || 1),
+      storageDays: Number(row.storage_days || 0),
+      utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
+      daysInMonth: Number(row.days_in_month || 30),
+      ageBand: normalizeAgeBand(row.age_band)
+    });
+    return result;
+  });
+  els.batchWrap.classList.remove("hidden");
+  els.batchTable.innerHTML = lastBatchRows.map(r => `<tr>
+    <td>${r.mp.code}</td>
+    <td>${seasonLabel(r.input.seasonBand)}</td>
+    <td>${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / hazmat" : ""}<div class="subtle">${storageCategoryLabel(r.mp.code, r.storageCategory)}</div></td>
+    <td class="num">${fmtNum(r.units, 0)}</td>
+    <td class="num">${fmtNum(r.unitVolume, 6)} ${r.billUnit}</td>
+    <td class="num">${fmtMoney(r.totalFee, r.mp.currency)}</td>
+    <td>${RATES.monthly[r.mp.code]?.status || ""}</td>
+  </tr>`).join("");
+}
+
+function downloadCsv() {
+  if (!lastBatchRows.length) batchCalculate();
+  const header = ["marketplace","season","storage_category","currency","size_type","quantity","storage_days","utilization_weeks","days_in_month","billable_units","billing_unit","unit_volume","billable_volume","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
+  const rows = lastBatchRows.map(r => [
+    r.mp.code, normalizeSeason(r.input.seasonBand), r.storageCategory, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.input.daysInMonth || "", r.billableUnits, r.billUnit, r.unitVolume, r.totalVolume,
+    r.baseFee, r.utilizationFee, r.agedFee, r.totalFee, r.costPerUnit,
+    RATES.monthly[r.mp.code]?.status || ""
+  ]);
+  const csv = [header, ...rows].map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "amazon_storage_fee_results.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadBatchTemplate() {
+  const blob = new Blob([BATCH_TEMPLATE], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "amazon_storage_fee_import_template.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCsvFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    els.batchInput.value = String(reader.result || "").replace(/^\uFEFF/, "");
+    batchCalculate();
+  };
+  reader.readAsText(file, "utf-8");
+}
+
+function importRatesJson(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(String(reader.result || "").replace(/^\uFEFF/, ""));
+      RATES = mergeRates(makeDefaults(), imported);
+      saveRates();
+      renderRateTables();
+      renderResult();
+      alert("费率 JSON 已导入并保存到本地浏览器。");
+    } catch (error) {
+      alert(`费率 JSON 导入失败：${error.message}`);
+    }
+  };
+  reader.readAsText(file, "utf-8");
+}
+
+function copyResult() {
+  if (!lastResult) renderResult();
+  const r = lastResult;
+  const text = [
+    `站点：${r.mp.code}`,
+    `计费季节：${seasonLabel(r.input.seasonBand)}`,
+    `仓储类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}`,
+    `尺寸类型：${r.sizeDecision.label}`,
+    `单件体积：${fmtNum(r.unitVolume, 6)} ${r.billUnit}`,
+    `存放天数：${fmtNum(r.input.storageDays, 1)} / ${fmtNum(r.input.daysInMonth, 0)} 天`,
+    `仓储利用率周数：${fmtNum(r.input.utilizationWeeks, 1)}`,
+    `折算计费体积：${fmtNum(r.totalVolume, 4)} ${r.billUnit}`,
+    `基础费：${fmtMoney(r.baseFee, r.mp.currency)}`,
+    `仓储利用率附加费：${fmtMoney(r.utilizationFee, r.mp.currency)}`,
+    `库龄附加费：${fmtMoney(r.agedFee, r.mp.currency)}`,
+    `总费用：${fmtMoney(r.totalFee, r.mp.currency)}`,
+    `单件摊销：${fmtMoney(r.costPerUnit, r.mp.currency)}`
+  ].join("\n");
+  navigator.clipboard?.writeText(text);
+}
+
+function bindEvents() {
+  document.querySelectorAll("input, select").forEach(el => {
+    if (!el.dataset.rate) el.addEventListener("input", renderResult);
+  });
+  els.daysInMonth.addEventListener("input", () => {
+    els.daysInMonth.dataset.touched = "true";
+  });
+  document.getElementById("calcBtn").addEventListener("click", renderResult);
+  document.getElementById("copyResultBtn").addEventListener("click", copyResult);
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    els.marketplace.value = "US";
+    els.seasonBand.value = "peak";
+    els.storageCategory.value = "default";
+    els.hazmat.value = "no";
+    els.billingUnit.value = "auto";
+    els.length.value = 30;
+    els.width.value = 20;
+    els.height.value = 5;
+    els.weightKg.value = 0.5;
+    els.storageDays.value = 45;
+    els.utilizationWeeks.value = 0;
+    els.daysInMonth.value = 30;
+    els.units.value = 1;
+    els.ageBand.value = "0_90";
+    renderResult();
+  });
+  document.getElementById("batchBtn").addEventListener("click", batchCalculate);
+  document.getElementById("importCsvBtn").addEventListener("click", () => {
+    document.getElementById("csvFileInput").click();
+  });
+  document.getElementById("csvFileInput").addEventListener("change", event => {
+    importCsvFile(event.target.files?.[0]);
+    event.target.value = "";
+  });
+  document.getElementById("downloadTemplateBtn").addEventListener("click", downloadBatchTemplate);
+  document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
+  document.getElementById("importRatesBtn").addEventListener("click", () => {
+    document.getElementById("rateJsonInput").click();
+  });
+  document.getElementById("rateJsonInput").addEventListener("change", event => {
+    importRatesJson(event.target.files?.[0]);
+    event.target.value = "";
+  });
+  document.getElementById("exportRatesBtn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(RATES, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "amazon_storage_fee_rates.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById("restoreRatesBtn").addEventListener("click", () => {
+    RATES = makeDefaults();
+    saveRates();
+    renderRateTables();
+    renderResult();
+  });
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      ["monthly","season","utilization","aged","sources"].forEach(name => {
+        document.getElementById(`${name}Tab`).classList.toggle("hidden", name !== btn.dataset.rateTab);
+      });
+    });
+  });
+  document.addEventListener("input", e => {
+    if (e.target instanceof HTMLInputElement && e.target.dataset.rate) applyRateEdit(e.target);
+  });
+}
+
+function parseStorageApiRows(text) {
+  const lines = String(text || "").split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) throw new Error("仓储费 CSV 至少需要表头和一行数据。");
+  const headers = parseCsvLine(lines.shift()).map(h => h.trim().toLowerCase());
+  return lines.map((line, index) => {
+    const row = Object.fromEntries(parseCsvLine(line).map((value, cellIndex) => [headers[cellIndex], value]));
+    return { rowNumber: index + 2, row };
+  });
+}
+
+function storageApiResult(item) {
+  const row = item.row;
+  const result = calculate({
+    marketplace: row.marketplace || row.country || "US",
+    seasonBand: normalizeSeason(row.season || row.season_band || "offPeak"),
+    storageCategory: row.storage_category || row.category || "default",
+    hazmat: row.hazmat || row.is_hazmat || "no",
+    billingUnit: "auto",
+    length: Number(row.length_cm || row.length || 0),
+    width: Number(row.width_cm || row.width || 0),
+    height: Number(row.height_cm || row.height || 0),
+    weightKg: Number(row.weight_kg || row.package_weight_kg || 0),
+    units: Number(row.quantity || row.units || 1),
+    storageDays: Number(row.storage_days || row.inventory_turnover_days || row.turnover_days || 0),
+    utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
+    daysInMonth: Number(row.days_in_month || 30),
+    ageBand: normalizeAgeBand(row.age_band)
+  });
+  return {
+    row_number: item.rowNumber,
+    country: result.mp.code,
+    sku: row.sku || "",
+    currency: result.mp.currency,
+    storage_season: normalizeSeason(result.input.seasonBand),
+    storage_category: result.storageCategory,
+    storage_category_label: storageCategoryLabel(result.mp.code, result.storageCategory),
+    storage_category_required: categoryRequirement(result.mp.code).required,
+    inventory_turnover_days: result.input.storageDays || 0,
+    storage_utilization_weeks: result.input.utilizationWeeks || 0,
+    storage_days: result.input.storageDays || 0,
+    days_in_month: result.input.daysInMonth || 30,
+    storage_age_band: result.ageBand,
+    storage_size_type: result.sizeDecision.type,
+    storage_billing_unit: result.billUnit,
+    storage_unit_volume: result.unitVolume,
+    storage_billable_volume: result.totalVolume,
+    storage_base_fee_local: result.baseFee,
+    storage_utilization_fee_local: result.utilizationFee,
+    storage_aged_fee_local: result.agedFee,
+    storage_fee_local: result.totalFee,
+    storage_cost_per_unit_local: result.costPerUnit,
+    storage_rate_status: RATES.monthly[result.mp.code]?.status || "",
+    storage_notes: result.sizeDecision.reason
+  };
+}
+
+window.addEventListener("message", event => {
+  const message = event.data || {};
+  if (message.type !== "amazon:storage:calculate") return;
+  try {
+    const rows = parseStorageApiRows(message.csv || "").map(storageApiResult);
+    event.source?.postMessage({
+      type: "amazon:storage:calculate:result",
+      requestId: message.requestId,
+      ok: true,
+      results: rows
+    }, "*");
+  } catch (error) {
+    event.source?.postMessage({
+      type: "amazon:storage:calculate:result",
+      requestId: message.requestId,
+      ok: false,
+      error: error.message
+    }, "*");
+  }
+});
+
+initSelectors();
+renderRateTables();
+bindEvents();
+renderResult();
+</script>
+</body>
+</html>
