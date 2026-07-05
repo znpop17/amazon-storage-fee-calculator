@@ -291,7 +291,7 @@
   <header>
     <div>
       <h1>亚马逊仓储费计算器</h1>
-      <p>按站点、月份、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率可直接编辑，适合做新品备货和滞销库存复盘。</p>
+      <p>按国家、SKU、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率可直接编辑，适合做新品备货和滞销库存复盘。</p>
     </div>
     <span class="badge">支持 20 个 Marketplace 来源链接</span>
   </header>
@@ -304,9 +304,15 @@
       </div>
       <div class="panel-body stack">
         <div class="grid">
-          <label>站点
+          <label>SKU
+            <input id="sku" type="text" placeholder="可选">
+          </label>
+          <label>国家
             <select id="marketplace"></select>
           </label>
+        </div>
+
+        <div class="grid">
           <label>计费季节
             <select id="seasonBand">
               <option value="offPeak">淡季</option>
@@ -332,7 +338,7 @@
 
         <div class="grid">
           <label>类目要求
-            <input id="categoryNotice" value="当前站点无需提供仓储类目" disabled>
+            <input id="categoryNotice" value="当前国家无需提供仓储类目" disabled>
           </label>
           <label>危险品
             <select id="hazmat">
@@ -348,7 +354,7 @@
           </label>
           <label>计费体积单位
             <select id="billingUnit">
-              <option value="auto">跟随站点</option>
+              <option value="auto">跟随国家</option>
               <option value="ft3">立方英尺 ft³</option>
               <option value="m3">立方米 m³</option>
             </select>
@@ -410,7 +416,7 @@
 
         <div class="notice" id="dataNotice"></div>
         <div class="notice ok">
-          单品仓储费需要提供：站点、计费季节、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分站点还需要选择仓储类目。工具会按站点尺寸政策自动判断标准尺寸或大件，再套用对应仓储费率。
+          单品仓储费需要提供：SKU、国家、计费季节、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按国家尺寸政策自动判断标准尺寸或大件，再套用对应仓储费率。
         </div>
       </div>
     </section>
@@ -453,11 +459,11 @@
             </div>
             <div>
               <h3>批量 CSV</h3>
-              <p class="subtle">列名：marketplace,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band。season 填 offPeak 或 peak；仓储利用率周数没有后台数据时填 0。</p>
-              <textarea id="batchInput" spellcheck="false">marketplace,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
-US,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
-JP,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455
-DE,peak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
+              <p class="subtle">列名：sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band。country 可填中文国家或国家代码；season 填 offPeak 或 peak；仓储利用率周数没有后台数据时填 0。</p>
+              <textarea id="batchInput" spellcheck="false">sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
+SKU-001,美国,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
+SKU-002,日本,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455
+SKU-003,德国,peak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
               <div class="actions" style="margin-top:10px;">
                 <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden">
                 <button class="ghost" id="importCsvBtn">导入 CSV</button>
@@ -472,7 +478,7 @@ DE,peak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
             <table>
               <thead>
                 <tr>
-                  <th>站点</th><th>月份</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">总费用</th><th>说明</th>
+                  <th>SKU</th><th>国家</th><th>季节</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">总费用</th><th>说明</th>
                 </tr>
               </thead>
               <tbody id="batchTable"></tbody>
@@ -539,6 +545,70 @@ const MARKETPLACES = [
   ["Other","BR","BRL","m3","Inventory storage fees","https://sellercentral.amazon.com.br/help/hub/reference/external/G200612770","Current Brazil FBA storage fee page"]
 ].map(([region, code, currency, unit, pageType, url, notes]) => ({ region, code, currency, unit, pageType, url, notes }));
 
+const COUNTRY_NAMES = {
+  US: "美国",
+  CA: "加拿大",
+  MX: "墨西哥",
+  UK: "英国",
+  DE: "德国",
+  FR: "法国",
+  IT: "意大利",
+  ES: "西班牙",
+  NL: "荷兰",
+  SE: "瑞典",
+  PL: "波兰",
+  BE: "比利时",
+  JP: "日本",
+  AU: "澳大利亚",
+  SG: "新加坡",
+  IN: "印度",
+  AE: "阿联酋",
+  SA: "沙特阿拉伯",
+  EG: "埃及",
+  TR: "土耳其",
+  BR: "巴西"
+};
+
+const COUNTRY_ALIASES = Object.fromEntries(MARKETPLACES.flatMap(mp => {
+  const country = COUNTRY_NAMES[mp.code] || mp.code;
+  return [
+    [mp.code.toLowerCase(), mp.code],
+    [country.toLowerCase(), mp.code]
+  ];
+}));
+Object.assign(COUNTRY_ALIASES, {
+  usa: "US",
+  "united states": "US",
+  "united states of america": "US",
+  美国: "US",
+  加拿大: "CA",
+  墨西哥: "MX",
+  英国: "UK",
+  德国: "DE",
+  法国: "FR",
+  意大利: "IT",
+  西班牙: "ES",
+  荷兰: "NL",
+  瑞典: "SE",
+  波兰: "PL",
+  比利时: "BE",
+  日本: "JP",
+  澳大利亚: "AU",
+  澳洲: "AU",
+  新加坡: "SG",
+  印度: "IN",
+  阿联酋: "AE",
+  沙特: "SA",
+  沙特阿拉伯: "SA",
+  埃及: "EG",
+  土耳其: "TR",
+  巴西: "BR"
+});
+
+function countryLabel(code) {
+  return `${COUNTRY_NAMES[code] || code}（${code}）`;
+}
+
 const SIZE_RULES = {
   US: { label: "US standard-size", maxLongestCm: 45.72, maxMedianCm: 35.56, maxShortestCm: 20.32, maxWeightKg: 9.07185, source: "US: <= 18 x 14 x 8 in and <= 20 lb" },
   CA: { label: "CA envelope/standard", maxLongestCm: 45, maxMedianCm: 35, maxShortestCm: 20, maxWeightKg: 9, source: "CA: envelope/standard <= 45 x 35 x 20 cm and <= 9 kg" },
@@ -584,7 +654,7 @@ const SEASON_WINDOWS = {
   DEFAULT: {
     offPeak: "1-9月",
     peak: "10-12月",
-    note: "多数公开费率卡按 Jan-Sep / Oct-Dec 切分；未填官方费率的站点需按 Seller Central 页面最终确认。"
+    note: "多数公开费率卡按 Jan-Sep / Oct-Dec 切分；未填官方费率的国家需按 Seller Central 页面最终确认。"
   }
 };
 
@@ -654,7 +724,7 @@ function makeDefaults() {
   MARKETPLACES.forEach(mp => {
     const monthlyDefaults = {
       status: "needs_official_check",
-      note: "已登记官方页面链接，但未写入默认费率；请在费率表中填入该站点官方费率后计算。",
+      note: "已登记官方页面链接，但未写入默认费率；请在费率表中填入该国家官方费率后计算。",
       standard: { offPeak: 0, peak: 0 },
       oversize: { offPeak: 0, peak: 0 },
       hazmatStandard: { offPeak: 0, peak: 0 },
@@ -1028,15 +1098,15 @@ let lastResult = null;
 let lastBatchRows = [];
 
 const els = Object.fromEntries([
-  "marketplace","seasonBand","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","billingUnit","length","width","height","weightKg",
+  "sku","marketplace","seasonBand","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","billingUnit","length","width","height","weightKg",
   "storageDays","utilizationWeeks","daysInMonth","units",
   "ageBand","sourceBadge","dataNotice","baseFee","utilizationFee","agedFee","totalFee","baseRateText",
   "utilizationRateText","agedRateText","perUnitText","formulaText","detailTable","batchInput","batchWrap","batchTable"
 ].map(id => [id, document.getElementById(id)]));
 
-const BATCH_TEMPLATE = `marketplace,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
-US,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
-JP,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
+const BATCH_TEMPLATE = `sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
+SKU-001,美国,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
+SKU-002,日本,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
 
 function loadRates() {
   try {
@@ -1069,8 +1139,14 @@ function fmtNum(value, digits = 4) {
   return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: digits }).format(value);
 }
 
+function normalizeCountryCode(value) {
+  const raw = String(value || "US").trim();
+  return COUNTRY_ALIASES[raw.toLowerCase()] || raw.toUpperCase();
+}
+
 function getMarket(code = els.marketplace.value) {
-  return MARKETPLACES.find(mp => mp.code === code) || MARKETPLACES[0];
+  const normalized = normalizeCountryCode(code);
+  return MARKETPLACES.find(mp => mp.code === normalized) || MARKETPLACES[0];
 }
 
 function normalizeSeason(value) {
@@ -1095,7 +1171,7 @@ function storageCategoryLabel(mpCode, value) {
 }
 
 function categoryRequirement(mpCode) {
-  return STORAGE_CATEGORY_REQUIREMENTS[mpCode] || { required: false, note: "当前站点无需提供仓储类目。" };
+  return STORAGE_CATEGORY_REQUIREMENTS[mpCode] || { required: false, note: "当前国家无需提供仓储类目。" };
 }
 
 function ageBandLabel(value) {
@@ -1234,12 +1310,14 @@ function calculate(input) {
     baseRate, utilizationByVolume, agedByVolume: effectiveAgedByVolume, min365, ageBand, storageCategory,
     baseFee, utilizationFee, agedFee, totalFee,
     costPerUnit: units ? totalFee / units : 0,
+    sku: input.sku || "",
     input
   };
 }
 
 function currentInput() {
   return {
+    sku: els.sku.value.trim(),
     marketplace: els.marketplace.value,
     seasonBand: els.seasonBand.value,
     storageCategory: els.storageCategory.value,
@@ -1262,9 +1340,9 @@ function renderResult() {
   const r = lastResult;
   els.sizeType.value = r.sizeDecision.type;
   els.sizeTypeLabel.value = `${r.sizeDecision.label}（${r.sizeDecision.detailLabel}）`;
-  els.sourceBadge.textContent = `${r.mp.code} / ${r.mp.currency}`;
+  els.sourceBadge.textContent = `${countryLabel(r.mp.code)} / ${r.mp.currency}`;
   const requirement = categoryRequirement(r.mp.code);
-  els.categoryNotice.value = requirement.required ? requirement.note : "当前站点无需提供仓储类目";
+  els.categoryNotice.value = requirement.required ? requirement.note : "当前国家无需提供仓储类目";
   els.storageCategory.disabled = !requirement.required;
   if (!requirement.required && els.storageCategory.value !== "default") {
     els.storageCategory.value = "default";
@@ -1273,8 +1351,8 @@ function renderResult() {
   const hasPresetRate = status && status !== "needs_official_check" && r.baseRate > 0;
   els.dataNotice.className = hasPresetRate ? "notice ok" : "notice";
   els.dataNotice.textContent = hasPresetRate
-    ? `当前站点已预置月仓储费率。状态：${status}。类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}。来源：${r.mp.pageType}，${monthlyRateNote(r.mp.code, r.storageCategory, r.input.hazmat)}`
-    : `当前站点只登记了官方链接，默认费率为 0；请在“费率表”补入官方数值后计算。来源：${r.mp.url}`;
+    ? `当前国家已预置月仓储费率。状态：${status}。类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}。来源：${r.mp.pageType}，${monthlyRateNote(r.mp.code, r.storageCategory, r.input.hazmat)}`
+    : `当前国家只登记了官方链接，默认费率为 0；请在“费率表”补入官方数值后计算。来源：${r.mp.url}`;
 
   els.baseFee.textContent = fmtMoney(r.baseFee, r.mp.currency);
   els.utilizationFee.textContent = fmtMoney(r.utilizationFee, r.mp.currency);
@@ -1289,9 +1367,10 @@ function renderResult() {
   els.formulaText.textContent = `${fmtNum(r.unitVolume, 6)} ${r.billUnit} x ${fmtNum(r.input.storageDays, 1)} / ${fmtNum(r.input.daysInMonth, 0)} x 费率`;
 
   const rows = [
-    ["站点", `${r.mp.region} / ${r.mp.code}`],
+    ["SKU", r.sku || "-"],
+    ["国家", `${countryLabel(r.mp.code)} / ${r.mp.region}`],
     ["计费季节", `${seasonLabel(r.input.seasonBand)}（具体月份见淡旺季对比表）`],
-    ["仓储类目", `${storageCategoryLabel(r.mp.code, r.storageCategory)}；${requirement.required ? "当前站点需要提供类目" : "当前站点无需提供类目"}`],
+    ["仓储类目", `${storageCategoryLabel(r.mp.code, r.storageCategory)}；${requirement.required ? "当前国家需要提供类目" : "当前国家无需提供类目"}`],
     ["尺寸类型", `${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / 危险品" : ""}`],
     ["尺寸判断依据", r.sizeDecision.reason],
     ["库存库龄", ageBandLabel(r.ageBand)],
@@ -1313,7 +1392,7 @@ function initSelectors() {
     return acc;
   }, {});
   els.marketplace.innerHTML = Object.entries(grouped).map(([region, items]) =>
-    `<optgroup label="${region}">${items.map(mp => `<option value="${mp.code}">${mp.code} (${mp.currency})</option>`).join("")}</optgroup>`
+    `<optgroup label="${region}">${items.map(mp => `<option value="${mp.code}">${countryLabel(mp.code)} - ${mp.currency}</option>`).join("")}</optgroup>`
   ).join("");
   els.marketplace.value = "US";
   els.seasonBand.value = "peak";
@@ -1340,7 +1419,7 @@ function renderMonthlyTable() {
     </tr>`;
   }).join("");
   document.getElementById("monthlyTab").innerHTML = `<table>
-    <thead><tr><th>站点</th><th>标准淡季</th><th>标准旺季</th><th>大件淡季</th><th>大件旺季</th><th>危险品标准淡季</th><th>危险品标准旺季</th><th>危险品大件淡季</th><th>危险品大件旺季</th><th>状态</th></tr></thead>
+    <thead><tr><th>国家</th><th>标准淡季</th><th>标准旺季</th><th>大件淡季</th><th>大件旺季</th><th>危险品标准淡季</th><th>危险品标准旺季</th><th>危险品大件淡季</th><th>危险品大件旺季</th><th>状态</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -1357,7 +1436,7 @@ function renderSeasonTable() {
     return `<tr>
       <td><strong>${mp.region}</strong></td>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
-      <td>${requirement.required ? "需要" : "无需"}<div class="subtle">${requirement.required ? requirement.note : "按站点费率计算"}</div></td>
+      <td>${requirement.required ? "需要" : "无需"}<div class="subtle">${requirement.required ? requirement.note : "按国家费率计算"}</div></td>
       <td>${seasonInfo.offPeak}</td>
       <td>${seasonInfo.peak}</td>
       <td class="num">${rateText(r.standard.offPeak)}</td>
@@ -1368,7 +1447,7 @@ function renderSeasonTable() {
     </tr>`;
   }).join("");
   document.getElementById("seasonTab").innerHTML = `<table>
-    <thead><tr><th>区域</th><th>站点</th><th>类目要求</th><th>淡季月份</th><th>旺季月份</th><th class="num">标准淡季</th><th class="num">标准旺季</th><th class="num">大件淡季</th><th class="num">大件旺季</th><th>数据状态</th></tr></thead>
+    <thead><tr><th>区域</th><th>国家</th><th>类目要求</th><th>淡季月份</th><th>旺季月份</th><th class="num">标准淡季</th><th class="num">标准旺季</th><th class="num">大件淡季</th><th class="num">大件旺季</th><th>数据状态</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -1385,7 +1464,7 @@ function renderAgedTable() {
     </tr>`;
   }).join("");
   document.getElementById("agedTab").innerHTML = `<table>
-    <thead><tr><th>站点</th>${bands.map(b => `<th>${labels[b]}</th>`).join("")}<th>365+ 单件最低</th></tr></thead>
+    <thead><tr><th>国家</th>${bands.map(b => `<th>${labels[b]}</th>`).join("")}<th>365+ 单件最低</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -1414,7 +1493,7 @@ function renderUtilizationTable() {
     </tr>`;
   }).join("");
   document.getElementById("utilizationTab").innerHTML = `<table>
-    <thead><tr><th>站点</th><th>22-28</th><th>28-36</th><th>36-44</th><th>44-52</th><th>52+</th><th>JP 26-39</th><th>JP 39-52</th><th>状态</th></tr></thead>
+    <thead><tr><th>国家</th><th>22-28</th><th>28-36</th><th>36-44</th><th>44-52</th><th>52+</th><th>JP 26-39</th><th>JP 39-52</th><th>状态</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -1472,7 +1551,8 @@ function batchCalculate() {
   lastBatchRows = lines.map(line => {
     const row = Object.fromEntries(parseCsvLine(line).map((v, i) => [headers[i], v]));
     const result = calculate({
-      marketplace: row.marketplace || "US",
+      sku: row.sku || row.SKU || "",
+      marketplace: row.country || row.marketplace || "US",
       seasonBand: normalizeSeason(row.season || row.season_band || "offPeak"),
       storageCategory: row.storage_category || row.category || "default",
       hazmat: row.hazmat || "no",
@@ -1491,7 +1571,8 @@ function batchCalculate() {
   });
   els.batchWrap.classList.remove("hidden");
   els.batchTable.innerHTML = lastBatchRows.map(r => `<tr>
-    <td>${r.mp.code}</td>
+    <td>${r.sku || "-"}</td>
+    <td>${countryLabel(r.mp.code)}</td>
     <td>${seasonLabel(r.input.seasonBand)}</td>
     <td>${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / hazmat" : ""}<div class="subtle">${storageCategoryLabel(r.mp.code, r.storageCategory)}</div></td>
     <td class="num">${fmtNum(r.units, 0)}</td>
@@ -1503,9 +1584,9 @@ function batchCalculate() {
 
 function downloadCsv() {
   if (!lastBatchRows.length) batchCalculate();
-  const header = ["marketplace","season","storage_category","currency","size_type","quantity","storage_days","utilization_weeks","days_in_month","billable_units","billing_unit","unit_volume","billable_volume","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
+  const header = ["sku","country","marketplace","season","storage_category","currency","size_type","quantity","storage_days","utilization_weeks","days_in_month","billable_units","billing_unit","unit_volume","billable_volume","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
   const rows = lastBatchRows.map(r => [
-    r.mp.code, normalizeSeason(r.input.seasonBand), r.storageCategory, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.input.daysInMonth || "", r.billableUnits, r.billUnit, r.unitVolume, r.totalVolume,
+    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, normalizeSeason(r.input.seasonBand), r.storageCategory, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.input.daysInMonth || "", r.billableUnits, r.billUnit, r.unitVolume, r.totalVolume,
     r.baseFee, r.utilizationFee, r.agedFee, r.totalFee, r.costPerUnit,
     RATES.monthly[r.mp.code]?.status || ""
   ]);
@@ -1561,7 +1642,8 @@ function copyResult() {
   if (!lastResult) renderResult();
   const r = lastResult;
   const text = [
-    `站点：${r.mp.code}`,
+    `SKU：${r.sku || "-"}`,
+    `国家：${countryLabel(r.mp.code)}`,
     `计费季节：${seasonLabel(r.input.seasonBand)}`,
     `仓储类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}`,
     `尺寸类型：${r.sizeDecision.label}`,
@@ -1588,6 +1670,7 @@ function bindEvents() {
   document.getElementById("calcBtn").addEventListener("click", renderResult);
   document.getElementById("copyResultBtn").addEventListener("click", copyResult);
   document.getElementById("resetBtn").addEventListener("click", () => {
+    els.sku.value = "";
     els.marketplace.value = "US";
     els.seasonBand.value = "peak";
     els.storageCategory.value = "default";
@@ -1663,7 +1746,8 @@ function parseStorageApiRows(text) {
 function storageApiResult(item) {
   const row = item.row;
   const result = calculate({
-    marketplace: row.marketplace || row.country || "US",
+    sku: row.sku || row.SKU || "",
+    marketplace: row.country || row.marketplace || "US",
     seasonBand: normalizeSeason(row.season || row.season_band || "offPeak"),
     storageCategory: row.storage_category || row.category || "default",
     hazmat: row.hazmat || row.is_hazmat || "no",
@@ -1680,8 +1764,9 @@ function storageApiResult(item) {
   });
   return {
     row_number: item.rowNumber,
-    country: result.mp.code,
-    sku: row.sku || "",
+    sku: result.sku || "",
+    country: COUNTRY_NAMES[result.mp.code] || result.mp.code,
+    marketplace: result.mp.code,
     currency: result.mp.currency,
     storage_season: normalizeSeason(result.input.seasonBand),
     storage_category: result.storageCategory,
