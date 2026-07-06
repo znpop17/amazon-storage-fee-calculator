@@ -461,9 +461,9 @@
               <h3>批量 CSV</h3>
               <p class="subtle">列名：sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band。country 可填中文国家或国家代码；season 填 offPeak 或 peak；仓储利用率周数没有后台数据时填 0。</p>
               <textarea id="batchInput" spellcheck="false">sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
-SKU-001,美国,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
-SKU-002,日本,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455
-SKU-003,德国,peak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
+SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,30,0_90
+SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455
+SKU-003,德国,offPeak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
               <div class="actions" style="margin-top:10px;">
                 <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden">
                 <button class="ghost" id="importCsvBtn">导入 CSV</button>
@@ -1105,8 +1105,8 @@ const els = Object.fromEntries([
 ].map(id => [id, document.getElementById(id)]));
 
 const BATCH_TEMPLATE = `sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
-SKU-001,美国,peak,default,no,30,20,5,0.5,1,45,0,30,0_90
-SKU-002,日本,peak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
+SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,30,0_90
+SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
 
 function loadRates() {
   try {
@@ -1395,7 +1395,7 @@ function initSelectors() {
     `<optgroup label="${region}">${items.map(mp => `<option value="${mp.code}">${countryLabel(mp.code)} - ${mp.currency}</option>`).join("")}</optgroup>`
   ).join("");
   els.marketplace.value = "US";
-  els.seasonBand.value = "peak";
+  els.seasonBand.value = "offPeak";
 }
 
 function renderRateTables() {
@@ -1672,7 +1672,7 @@ function bindEvents() {
   document.getElementById("resetBtn").addEventListener("click", () => {
     els.sku.value = "";
     els.marketplace.value = "US";
-    els.seasonBand.value = "peak";
+    els.seasonBand.value = "offPeak";
     els.storageCategory.value = "default";
     els.hazmat.value = "no";
     els.billingUnit.value = "auto";
