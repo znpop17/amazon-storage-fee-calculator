@@ -1403,11 +1403,12 @@ function renderRateTables() {
 function renderMonthlyTable() {
   const rows = MARKETPLACES.map(mp => {
     const r = RATES.monthly[mp.code];
+    const rateText = value => Number(value) > 0 ? fmtMoney(Number(value), mp.currency) : "待补";
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
       ${["standard","oversize","hazmatStandard","hazmatOversize"].map(key =>
-        `<td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="offPeak" type="number" step="0.01" value="${r[key].offPeak}" disabled></td>
-         <td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="peak" type="number" step="0.01" value="${r[key].peak}" disabled></td>`
+        `<td class="num">${rateText(r[key].offPeak)}</td>
+         <td class="num">${rateText(r[key].peak)}</td>`
       ).join("")}
       <td class="subtle">${r.status}</td>
     </tr>`;
@@ -1451,10 +1452,11 @@ function renderAgedTable() {
   const labels = {"0_90":"0-90（含90）","91_180":"91-180（含180）","181_210":"181-210（含210）","211_240":"211-240（含240）","241_270":"241-270（含270）","271_300":"271-300（含300）","301_330":"301-330（含330）","331_365":"331-365（含365）","366_455":"366-455（含455）","456_plus":"456+（不含455）"};
   const rows = MARKETPLACES.map(mp => {
     const r = RATES.aged[mp.code];
+    const rateText = value => Number(value) > 0 ? fmtMoney(Number(value), mp.currency) : "—";
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
-      ${bands.map(b => `<td><input data-rate="aged" data-market="${mp.code}" data-band="${b}" type="number" step="0.01" value="${r.byVolume[b]}" disabled></td>`).join("")}
-      <td><input data-rate="agedMin" data-market="${mp.code}" type="number" step="0.01" value="${r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0}" disabled></td>
+      ${bands.map(b => `<td class="num">${rateText(r.byVolume[b])}</td>`).join("")}
+      <td class="num">${rateText(r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0)}</td>
     </tr>`;
   }).join("");
   document.getElementById("agedTab").innerHTML = `<table>
