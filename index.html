@@ -291,7 +291,7 @@
   <header>
     <div>
       <h1>亚马逊仓储费计算器</h1>
-      <p>按国家、SKU、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率可直接编辑，适合做新品备货和滞销库存复盘。</p>
+      <p>按国家、SKU、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率表与政策绑定，只读展示，适合做新品备货和滞销库存复盘。</p>
     </div>
     <span class="badge">支持 20 个 Marketplace 来源链接</span>
   </header>
@@ -491,15 +491,12 @@ SKU-003,德国,offPeak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
         <div class="panel-head">
           <h2>费率表</h2>
           <div class="actions">
-            <input id="rateJsonInput" type="file" accept=".json,application/json" class="hidden">
-            <button class="secondary" id="importRatesBtn">导入费率 JSON</button>
             <button class="secondary" id="exportRatesBtn">导出费率 JSON</button>
-            <button class="ghost" id="restoreRatesBtn">恢复默认</button>
           </div>
         </div>
         <div class="panel-body stack">
           <div class="notice">
-            当前已预置 US、CA、MX、UK、DE、FR、IT、ES、NL、SE、PL、BE、JP、AU、IN、AE、SA、EG 的月仓储基础费；SG、TR、BR 已登记官方链接和计量单位，但具体费率仍为待补。可在月仓储表格中手动填写，或通过“导入费率 JSON”批量导入。
+            当前已预置 US、CA、MX、UK、DE、FR、IT、ES、NL、SE、PL、BE、JP、AU、IN、AE、SA、EG 的月仓储基础费；SG、TR、BR 已登记官方链接和计量单位，但具体费率仍为待补。费率表与政策绑定，页面内不可手动修改。
           </div>
           <div class="tabs">
             <button class="tab active" data-rate-tab="monthly">月仓储</button>
@@ -1109,15 +1106,12 @@ SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,30,0_90
 SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
 
 function loadRates() {
-  try {
-    const stored = localStorage.getItem("amazon_storage_fee_rates_v7");
-    if (stored) return mergeRates(makeDefaults(), JSON.parse(stored));
-  } catch {}
+  // Fee rates are policy-bound and intentionally ignore old browser-local edits.
   return makeDefaults();
 }
 
 function saveRates() {
-  localStorage.setItem("amazon_storage_fee_rates_v7", JSON.stringify(RATES));
+  // No-op: policy-bound rates are not saved as user-editable browser state.
 }
 
 function mergeRates(base, patch) {
@@ -1412,8 +1406,8 @@ function renderMonthlyTable() {
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
       ${["standard","oversize","hazmatStandard","hazmatOversize"].map(key =>
-        `<td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="offPeak" type="number" step="0.01" value="${r[key].offPeak}"></td>
-         <td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="peak" type="number" step="0.01" value="${r[key].peak}"></td>`
+        `<td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="offPeak" type="number" step="0.01" value="${r[key].offPeak}" disabled></td>
+         <td><input data-rate="monthly" data-market="${mp.code}" data-key="${key}" data-season="peak" type="number" step="0.01" value="${r[key].peak}" disabled></td>`
       ).join("")}
       <td class="subtle">${r.status}</td>
     </tr>`;
@@ -1459,8 +1453,8 @@ function renderAgedTable() {
     const r = RATES.aged[mp.code];
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
-      ${bands.map(b => `<td><input data-rate="aged" data-market="${mp.code}" data-band="${b}" type="number" step="0.01" value="${r.byVolume[b]}"></td>`).join("")}
-      <td><input data-rate="agedMin" data-market="${mp.code}" type="number" step="0.01" value="${r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0}"></td>
+      ${bands.map(b => `<td><input data-rate="aged" data-market="${mp.code}" data-band="${b}" type="number" step="0.01" value="${r.byVolume[b]}" disabled></td>`).join("")}
+      <td><input data-rate="agedMin" data-market="${mp.code}" type="number" step="0.01" value="${r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0}" disabled></td>
     </tr>`;
   }).join("");
   document.getElementById("agedTab").innerHTML = `<table>
@@ -1697,13 +1691,6 @@ function bindEvents() {
   });
   document.getElementById("downloadTemplateBtn").addEventListener("click", downloadBatchTemplate);
   document.getElementById("downloadCsvBtn").addEventListener("click", downloadCsv);
-  document.getElementById("importRatesBtn").addEventListener("click", () => {
-    document.getElementById("rateJsonInput").click();
-  });
-  document.getElementById("rateJsonInput").addEventListener("change", event => {
-    importRatesJson(event.target.files?.[0]);
-    event.target.value = "";
-  });
   document.getElementById("exportRatesBtn").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(RATES, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1713,12 +1700,6 @@ function bindEvents() {
     a.click();
     URL.revokeObjectURL(url);
   });
-  document.getElementById("restoreRatesBtn").addEventListener("click", () => {
-    RATES = makeDefaults();
-    saveRates();
-    renderRateTables();
-    renderResult();
-  });
   document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
@@ -1727,9 +1708,6 @@ function bindEvents() {
         document.getElementById(`${name}Tab`).classList.toggle("hidden", name !== btn.dataset.rateTab);
       });
     });
-  });
-  document.addEventListener("input", e => {
-    if (e.target instanceof HTMLInputElement && e.target.dataset.rate) applyRateEdit(e.target);
   });
 }
 
