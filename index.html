@@ -377,15 +377,12 @@
           <label>单品数量
             <input id="units" type="number" min="0" step="1" value="1">
           </label>
-          <label>计费天数
-            <input id="daysInMonth" type="number" min="1" max="31" step="1" value="30">
+          <label>单品存放/周转天数
+            <input id="storageDays" type="number" min="0" step="0.1" value="45">
           </label>
         </div>
 
         <div class="grid">
-          <label>单品存放/周转天数
-            <input id="storageDays" type="number" min="0" step="0.1" value="45">
-          </label>
           <label>仓储利用率周数（可选）
             <input id="utilizationWeeks" type="number" min="0" step="0.1" value="0">
           </label>
@@ -459,11 +456,11 @@
             </div>
             <div>
               <h3>批量 CSV</h3>
-              <p class="subtle">列名：sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band。country 可填中文国家或国家代码；season 填 offPeak 或 peak；仓储利用率周数没有后台数据时填 0。</p>
-              <textarea id="batchInput" spellcheck="false">sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
-SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,30,0_90
-SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455
-SKU-003,德国,offPeak,eu_fashion,no,30,20,5,0.5,1,45,0,30,0_90</textarea>
+              <p class="subtle">列名：sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band。country 可填中文国家或国家代码；season 填 offPeak 或 peak；仓储利用率周数没有后台数据时填 0。</p>
+              <textarea id="batchInput" spellcheck="false">sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
+SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,0_90
+SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,366_455
+SKU-003,德国,offPeak,eu_fashion,no,30,20,5,0.5,1,45,0,0_90</textarea>
               <div class="actions" style="margin-top:10px;">
                 <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden">
                 <button class="ghost" id="importCsvBtn">导入 CSV</button>
@@ -1093,17 +1090,18 @@ function makeDefaults() {
 let RATES = loadRates();
 let lastResult = null;
 let lastBatchRows = [];
+const BILLING_DAYS_PER_MONTH = 30;
 
 const els = Object.fromEntries([
   "sku","marketplace","seasonBand","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","billingUnit","length","width","height","weightKg",
-  "storageDays","utilizationWeeks","daysInMonth","units",
+  "storageDays","utilizationWeeks","units",
   "ageBand","sourceBadge","dataNotice","baseFee","utilizationFee","agedFee","totalFee","baseRateText",
   "utilizationRateText","agedRateText","perUnitText","formulaText","detailTable","batchInput","batchWrap","batchTable"
 ].map(id => [id, document.getElementById(id)]));
 
-const BATCH_TEMPLATE = `sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,days_in_month,age_band
-SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,30,0_90
-SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,30,366_455`;
+const BATCH_TEMPLATE = `sku,country,season,storage_category,hazmat,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
+SKU-001,美国,offPeak,default,no,30,20,5,0.5,1,45,0,0_90
+SKU-002,日本,offPeak,jp_fashion,no,30,20,5,0.5,1,45,26,366_455`;
 
 function loadRates() {
   // Fee rates are policy-bound and intentionally ignore old browser-local edits.
@@ -1273,9 +1271,8 @@ function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
 }
 
 function dayRatioFromInput(input) {
-  const days = Number(input.daysInMonth) || 30;
   const storageDays = Number(input.storageDays) || 0;
-  return days > 0 ? storageDays / days : 0;
+  return storageDays / BILLING_DAYS_PER_MONTH;
 }
 
 function calculate(input) {
@@ -1323,7 +1320,7 @@ function currentInput() {
     weightKg: Number(els.weightKg.value),
     storageDays: Number(els.storageDays.value),
     utilizationWeeks: Number(els.utilizationWeeks.value),
-    daysInMonth: Number(els.daysInMonth.value) || 30,
+    daysInMonth: BILLING_DAYS_PER_MONTH,
     units: Number(els.units.value),
     ageBand: normalizeAgeBand(els.ageBand.value)
   };
@@ -1358,7 +1355,7 @@ function renderResult() {
     : "未填写周数，默认不计";
   els.agedRateText.textContent = `${fmtMoney(r.agedByVolume, r.mp.currency)} / ${r.billUnit}` + (r.min365 ? `，365+ 最低 ${fmtMoney(r.min365, r.mp.currency)}` : "");
   els.perUnitText.textContent = `单件 ${fmtMoney(r.costPerUnit, r.mp.currency)}；${fmtNum(r.units, 0)} 件合计`;
-  els.formulaText.textContent = `${fmtNum(r.unitVolume, 6)} ${r.billUnit} x ${fmtNum(r.input.storageDays, 1)} / ${fmtNum(r.input.daysInMonth, 0)} x 费率`;
+  els.formulaText.textContent = `${fmtNum(r.unitVolume, 6)} ${r.billUnit} x ${fmtNum(r.input.storageDays, 1)} / ${BILLING_DAYS_PER_MONTH} x 月费率`;
 
   const rows = [
     ["SKU", r.sku || "-"],
@@ -1368,7 +1365,7 @@ function renderResult() {
     ["尺寸类型", `${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / 危险品" : ""}`],
     ["尺寸判断依据", r.sizeDecision.reason],
     ["库存库龄", ageBandLabel(r.ageBand)],
-    ["单品算法", `数量 ${fmtNum(r.units, 0)} × 存放 ${fmtNum(r.input.storageDays, 1)} 天 ÷ ${fmtNum(r.input.daysInMonth, 0)} 天 = 折算计费数量 ${fmtNum(r.billableUnits, 4)} 件`],
+    ["单品算法", `数量 ${fmtNum(r.units, 0)} × 单品存放/周转 ${fmtNum(r.input.storageDays, 1)} 天 ÷ ${BILLING_DAYS_PER_MONTH} 天/月 = 折算计费数量 ${fmtNum(r.billableUnits, 4)} 件`],
     ["单件体积", `${fmtNum(r.unitVolume, 6)} ${r.billUnit}`],
     ["折算计费体积", `${fmtNum(r.totalVolume, 4)} ${r.billUnit}`],
     ["月仓储基础费公式", `${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.baseRate, 4)} = ${fmtMoney(r.baseFee, r.mp.currency)}`],
@@ -1560,7 +1557,7 @@ function batchCalculate() {
       units: Number(row.quantity || row.units || 1),
       storageDays: Number(row.storage_days || 0),
       utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
-      daysInMonth: Number(row.days_in_month || 30),
+      daysInMonth: BILLING_DAYS_PER_MONTH,
       ageBand: normalizeAgeBand(row.age_band)
     });
     return result;
@@ -1580,9 +1577,9 @@ function batchCalculate() {
 
 function downloadCsv() {
   if (!lastBatchRows.length) batchCalculate();
-  const header = ["sku","country","marketplace","season","storage_category","currency","size_type","quantity","storage_days","utilization_weeks","days_in_month","billable_units","billing_unit","unit_volume","billable_volume","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
+  const header = ["sku","country","marketplace","season","storage_category","currency","size_type","quantity","storage_days","utilization_weeks","billable_units","billing_unit","unit_volume","billable_volume","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
   const rows = lastBatchRows.map(r => [
-    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, normalizeSeason(r.input.seasonBand), r.storageCategory, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.input.daysInMonth || "", r.billableUnits, r.billUnit, r.unitVolume, r.totalVolume,
+    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, normalizeSeason(r.input.seasonBand), r.storageCategory, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.billableUnits, r.billUnit, r.unitVolume, r.totalVolume,
     r.baseFee, r.utilizationFee, r.agedFee, r.totalFee, r.costPerUnit,
     RATES.monthly[r.mp.code]?.status || ""
   ]);
@@ -1644,7 +1641,7 @@ function copyResult() {
     `仓储类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}`,
     `尺寸类型：${r.sizeDecision.label}`,
     `单件体积：${fmtNum(r.unitVolume, 6)} ${r.billUnit}`,
-    `存放天数：${fmtNum(r.input.storageDays, 1)} / ${fmtNum(r.input.daysInMonth, 0)} 天`,
+    `单品存放/周转天数：${fmtNum(r.input.storageDays, 1)} 天（按 ${BILLING_DAYS_PER_MONTH} 天/月折算）`,
     `仓储利用率周数：${fmtNum(r.input.utilizationWeeks, 1)}`,
     `折算计费体积：${fmtNum(r.totalVolume, 4)} ${r.billUnit}`,
     `基础费：${fmtMoney(r.baseFee, r.mp.currency)}`,
@@ -1659,9 +1656,6 @@ function copyResult() {
 function bindEvents() {
   document.querySelectorAll("input, select").forEach(el => {
     if (!el.dataset.rate) el.addEventListener("input", renderResult);
-  });
-  els.daysInMonth.addEventListener("input", () => {
-    els.daysInMonth.dataset.touched = "true";
   });
   document.getElementById("calcBtn").addEventListener("click", renderResult);
   document.getElementById("copyResultBtn").addEventListener("click", copyResult);
@@ -1678,7 +1672,6 @@ function bindEvents() {
     els.weightKg.value = 0.5;
     els.storageDays.value = 45;
     els.utilizationWeeks.value = 0;
-    els.daysInMonth.value = 30;
     els.units.value = 1;
     els.ageBand.value = "0_90";
     renderResult();
@@ -1739,7 +1732,7 @@ function storageApiResult(item) {
     units: Number(row.quantity || row.units || 1),
     storageDays: Number(row.storage_days || row.inventory_turnover_days || row.turnover_days || 0),
     utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
-    daysInMonth: Number(row.days_in_month || 30),
+    daysInMonth: BILLING_DAYS_PER_MONTH,
     ageBand: normalizeAgeBand(row.age_band)
   });
   return {
@@ -1755,7 +1748,6 @@ function storageApiResult(item) {
     inventory_turnover_days: result.input.storageDays || 0,
     storage_utilization_weeks: result.input.utilizationWeeks || 0,
     storage_days: result.input.storageDays || 0,
-    days_in_month: result.input.daysInMonth || 30,
     storage_age_band: result.ageBand,
     storage_size_type: result.sizeDecision.type,
     storage_billing_unit: result.billUnit,
