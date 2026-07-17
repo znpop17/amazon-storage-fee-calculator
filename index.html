@@ -293,7 +293,7 @@
       <h1>亚马逊仓储费计算器</h1>
       <p>按国家、SKU、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率表与政策绑定，只读展示，适合做新品备货和滞销库存复盘。</p>
     </div>
-    <span class="badge">支持 20 个 Marketplace 来源链接</span>
+    <span class="badge">支持 21 个 Marketplace 来源链接</span>
   </header>
 
   <div class="layout">
@@ -714,8 +714,20 @@ const ADDITIONAL_FEE_SOURCES = {
   ],
   AU: [
     ["AU 超龄库存附加费", "https://sellercentral.amazon.com.au/help/hub/reference/external/G200684750", "2025-09-15 起"]
+  ],
+  EG: [
+    ["EG 长期仓储费", "https://sell.amazon.eg/selling-online-blog/reduce-amazon-storage-fees-through-inventory-planning?mons_sel_locale=en_US", "超过 365 天：EGP 40 / ft3"]
   ]
 };
+
+["UK", "DE", "FR", "IT", "ES", "NL", "SE", "PL", "BE"].forEach(code => {
+  ADDITIONAL_FEE_SOURCES[code] ||= [];
+  ADDITIONAL_FEE_SOURCES[code].push([
+    "欧洲 FBA 官方费率卡",
+    "https://m.media-amazon.com/images/G/02/sell/images/260410-FBA-Rate-Card-EN.pdf",
+    "2026-04-17 生效；包含月仓储费、仓储利用率及超龄费适用范围"
+  ]);
+});
 
 const BASE_RATE_TEMPLATE = {
   monthly: {},
@@ -765,55 +777,55 @@ function makeDefaults() {
       });
     } else if (mp.code === "UK") {
       Object.assign(monthlyDefaults, {
-        status: "official_rate_card_2025_02_01",
-        note: "UK/EU MCF/FBA storage rate card effective 2025-02-01; default category is All other categories, GBP per cubic foot.",
-        standard: { offPeak: 0.76, peak: 1.37 },
-        oversize: { offPeak: 0.50, peak: 0.79 },
-        hazmatStandard: { offPeak: 0.74, peak: 1.18 },
-        hazmatOversize: { offPeak: 0.64, peak: 1.01 },
+        status: "official_eu_rate_card_2026_04_17",
+        note: "Europe FBA storage rate card effective 2026-04-17; default category is All other categories, GBP per cubic foot.",
+        standard: { offPeak: 0.76, peak: 1.51 },
+        oversize: { offPeak: 0.55, peak: 0.87 },
+        hazmatStandard: { offPeak: 0.74, peak: 1.30 },
+        hazmatOversize: { offPeak: 0.70, peak: 1.11 },
         categoryOverrides: {
           eu_fashion: {
-            note: "UK/EU MCF/FBA storage rate card effective 2025-02-01; Clothing, Eyewear, Shoes and Bags rates, GBP per cubic foot.",
-            standard: { offPeak: 0.56, peak: 0.75 },
-            oversize: { offPeak: 0.56, peak: 0.75 },
-            hazmatStandard: { offPeak: 0.56, peak: 0.75 },
-            hazmatOversize: { offPeak: 0.56, peak: 0.75 }
+            note: "Europe FBA storage rate card effective 2026-04-17; Clothing, Eyewear, Shoes and Bags rates, GBP per cubic foot.",
+            standard: { offPeak: 0.62, peak: 0.82 },
+            oversize: { offPeak: 0.55, peak: 0.87 },
+            hazmatStandard: { offPeak: 0.62, peak: 0.82 },
+            hazmatOversize: { offPeak: 0.62, peak: 0.82 }
           }
         }
       });
     } else if (euEuroMarkets.has(mp.code)) {
       Object.assign(monthlyDefaults, {
-        status: "official_eu_rate_card_2025_05_15",
-        note: "EU FBA storage rate card; default category is All other categories, EUR per cubic metre. Use the storage category input for Clothing, Eyewear, Shoes and Bags.",
-        standard: { offPeak: 27.54, peak: 47.45 },
-        oversize: { offPeak: 19.80, peak: 31.35 },
-        hazmatStandard: { offPeak: 30.00, peak: 45.92 },
-        hazmatOversize: { offPeak: 25.00, peak: 39.90 },
+        status: "official_eu_rate_card_2026_04_17",
+        note: "Europe FBA storage rate card effective 2026-04-17; default category is All other categories, EUR per cubic metre. Use the storage category input for Clothing, Eyewear, Shoes and Bags.",
+        standard: { offPeak: 27.54, peak: 52.20 },
+        oversize: { offPeak: 21.78, peak: 34.49 },
+        hazmatStandard: { offPeak: 30.00, peak: 50.51 },
+        hazmatOversize: { offPeak: 27.50, peak: 43.89 },
         categoryOverrides: {
           eu_fashion: {
-            note: "EU FBA storage rate card lists Clothing, Eyewear, Shoes and Bags rates in EUR per cubic metre.",
-            standard: { offPeak: 18.17, peak: 26.58 },
-            oversize: { offPeak: 18.17, peak: 26.58 },
-            hazmatStandard: { offPeak: 18.17, peak: 26.58 },
-            hazmatOversize: { offPeak: 18.17, peak: 26.58 }
+            note: "Europe FBA storage rate card effective 2026-04-17 lists Clothing, Eyewear, Shoes and Bags rates in EUR per cubic metre.",
+            standard: { offPeak: 19.99, peak: 29.23 },
+            oversize: { offPeak: 21.78, peak: 34.49 },
+            hazmatStandard: { offPeak: 19.99, peak: 29.23 },
+            hazmatOversize: { offPeak: 19.99, peak: 29.23 }
           }
         }
       });
     } else if (mp.code === "SE") {
       Object.assign(monthlyDefaults, {
-        status: "official_eu_rate_card_2025_05_15",
-        note: "EU FBA storage rate card; default category is All other categories, SEK per cubic metre. Use the storage category input for Clothing, Eyewear, Shoes and Bags.",
-        standard: { offPeak: 321.31, peak: 498.34 },
-        oversize: { offPeak: 189.00, peak: 299.82 },
-        hazmatStandard: { offPeak: 315.00, peak: 482.72 },
-        hazmatOversize: { offPeak: 263.00, peak: 419.52 },
+        status: "official_eu_rate_card_2026_04_17",
+        note: "Europe FBA storage rate card effective 2026-04-17; default category is All other categories, SEK per cubic metre. Use the storage category input for Clothing, Eyewear, Shoes and Bags.",
+        standard: { offPeak: 321.31, peak: 548.18 },
+        oversize: { offPeak: 207.90, peak: 329.80 },
+        hazmatStandard: { offPeak: 315.00, peak: 530.99 },
+        hazmatOversize: { offPeak: 289.30, peak: 461.47 },
         categoryOverrides: {
           eu_fashion: {
-            note: "EU FBA storage rate card lists Clothing, Eyewear, Shoes and Bags rates in SEK per cubic metre.",
-            standard: { offPeak: 212.36, peak: 279.34 },
-            oversize: { offPeak: 212.36, peak: 279.34 },
-            hazmatStandard: { offPeak: 212.36, peak: 279.34 },
-            hazmatOversize: { offPeak: 212.36, peak: 279.34 }
+            note: "Europe FBA storage rate card effective 2026-04-17 lists Clothing, Eyewear, Shoes and Bags rates in SEK per cubic metre.",
+            standard: { offPeak: 233.59, peak: 307.27 },
+            oversize: { offPeak: 207.90, peak: 329.80 },
+            hazmatStandard: { offPeak: 233.59, peak: 307.27 },
+            hazmatOversize: { offPeak: 233.59, peak: 307.27 }
           }
         }
       });
@@ -906,8 +918,8 @@ function makeDefaults() {
       } : {}
     };
     rates.utilization[mp.code] = {
-      status: "not_applicable_or_not_loaded",
-      note: "仓储利用率附加费需填写 Seller Central 的 storage utilization ratio；默认不计。",
+      status: "not_listed_in_public_rate_card",
+      note: "当前官方公开费率页未列仓储利用率附加费，默认不计；如 Seller Central 账户显示该费用，应以账户费率为准。",
       thresholds: []
     };
     if (mp.code === "US") {
@@ -938,7 +950,7 @@ function makeDefaults() {
     }
     if (mp.code === "UK") {
       rates.utilization[mp.code] = {
-        status: "official_rate_card_2025_05_15",
+        status: "official_eu_rate_card_2026_04_17",
         note: "Applies above 22 weeks; excludes clothing, eyewear, shoes and bags categories.",
         thresholds: [
           { min: 22, max: 28, standard: 0.42, oversize: 0.12 },
@@ -951,7 +963,7 @@ function makeDefaults() {
     }
     if (["DE", "FR", "IT", "ES"].includes(mp.code)) {
       rates.utilization[mp.code] = {
-        status: "official_rate_card_2025_05_15",
+        status: "official_eu_rate_card_2026_04_17",
         note: "Applies above 22 weeks; excludes clothing, eyewear, shoes and bags categories.",
         thresholds: [
           { min: 22, max: 28, standard: 14.85, oversize: 4.29 },
@@ -973,6 +985,13 @@ function makeDefaults() {
         ]
       };
     };
+    if (["NL", "SE", "PL", "BE"].includes(mp.code)) {
+      rates.utilization[mp.code] = {
+        status: "not_applicable_eu_2026_rate_card",
+        note: "2026-04-17 欧洲官方费率卡的仓储利用率附加费仅列 UK、DE、FR、IT、ES，本国家未列。",
+        thresholds: []
+      };
+    }
     if (mp.code === "MX") {
       rates.aged[mp.code] = {
         status: "official_pricing_page_dm3_converted",
@@ -1056,7 +1075,7 @@ function makeDefaults() {
     if (["UK", "DE", "FR", "IT", "ES"].includes(mp.code)) {
       const isUk = mp.code === "UK";
       rates.aged[mp.code] = {
-        status: "official_rate_card_2025_05_15",
+        status: "official_eu_rate_card_2026_04_17",
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1068,7 +1087,37 @@ function makeDefaults() {
           "301_330": isUk ? 3.26 : 129.92,
           "331_365": isUk ? 3.41 : 135.98,
           "366_455": isUk ? 5.71 : 227.63,
-          "456_plus": isUk ? 5.71 : 227.63
+          "456_plus": isUk ? 6.14 : 261.97
+        },
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: { "366_455": 0.20, "456_plus": 0.25 }
+      };
+    }
+    if (["NL", "SE", "PL", "BE"].includes(mp.code)) {
+      rates.aged[mp.code] = {
+        status: "not_applicable_eu_2026_rate_card",
+        note: "2026-04-17 欧洲官方费率卡的超龄库存附加费未列本国家。",
+        byVolume: Object.fromEntries(["none", "0_90", "91_180", "181_210", "211_240", "241_270", "271_300", "301_330", "331_365", "366_455", "456_plus"].map(key => [key, 0])),
+        perUnitMinimum365: 0,
+        perUnitMinimumByBand: {}
+      };
+    }
+    if (mp.code === "EG") {
+      rates.aged[mp.code] = {
+        status: "official_public_pricing_365_plus",
+        note: "Amazon Egypt 官方公开页面列明：超过 365 天按 EGP 40 / ft3 收取长期仓储费。",
+        byVolume: {
+          none: 0,
+          "0_90": 0,
+          "91_180": 0,
+          "181_210": 0,
+          "211_240": 0,
+          "241_270": 0,
+          "271_300": 0,
+          "301_330": 0,
+          "331_365": 0,
+          "366_455": 40,
+          "456_plus": 40
         },
         perUnitMinimum365: 0,
         perUnitMinimumByBand: {}
@@ -1402,7 +1451,13 @@ function calculate(input) {
   const agedByVolume = agedRate(mp.code, ageBand);
   const utilizationByVolume = utilizationRate(mp.code, input.utilizationWeeks, sizeDecision.type, storageCategory);
   const minPerUnit = Number(RATES.aged[mp.code]?.perUnitMinimumByBand?.[ageBand] ?? RATES.aged[mp.code]?.perUnitMinimum365 ?? 0);
-  const effectiveAgedByVolume = ["US", "CA"].includes(mp.code) && storageCategory === "us_aged_exempt" && ["181_210", "211_240", "241_270"].includes(ageBand) ? 0 : agedByVolume;
+  const usCaAgedExempt = ["US", "CA"].includes(mp.code)
+    && storageCategory === "us_aged_exempt"
+    && ["181_210", "211_240", "241_270"].includes(ageBand);
+  const euAgedExempt = ["UK", "DE", "FR", "IT", "ES"].includes(mp.code)
+    && storageCategory === "eu_fashion"
+    && ageBand === "241_270";
+  const effectiveAgedByVolume = usCaAgedExempt || euAgedExempt ? 0 : agedByVolume;
   const segments = period.segments.map(segment => {
     const officialBaseRate = monthlyRate(mp.code, segment.seasonBand, sizeDecision.type, input.hazmat, storageCategory);
     const baseRateExTax = officialBaseRate / taxMultiplier;
@@ -1612,15 +1667,23 @@ function renderAgedTable() {
   const labels = {"0_90":"0-90（含90）","91_180":"91-180（含180）","181_210":"181-210（含210）","211_240":"211-240（含240）","241_270":"241-270（含270）","271_300":"271-300（含300）","301_330":"301-330（含330）","331_365":"331-365（含365）","366_455":"366-455（含455）","456_plus":"456+（不含455）"};
   const rows = MARKETPLACES.map(mp => {
     const r = RATES.aged[mp.code];
-    const rateText = value => Number(value) > 0 ? fmtMoney(Number(value), mp.currency) : "—";
+    const isNotApplicable = String(r.status || "").startsWith("not_applicable");
+    const isPending = String(r.status || "").startsWith("needs_official_check");
+    const rateText = (value, band) => {
+      if (Number(value) > 0) return fmtMoney(Number(value), mp.currency);
+      if (isNotApplicable) return "不适用";
+      if (isPending && !["0_90", "91_180"].includes(band)) return "待核实";
+      return "—";
+    };
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
-      ${bands.map(b => `<td class="num">${rateText(r.byVolume[b])}</td>`).join("")}
-      <td class="num">${rateText(r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0)}</td>
+      ${bands.map(b => `<td class="num">${rateText(r.byVolume[b], b)}</td>`).join("")}
+      <td class="num">${rateText(r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0, "366_455")}</td>
+      <td class="subtle">${r.status}<br>${r.note || ""}</td>
     </tr>`;
   }).join("");
   document.getElementById("agedTab").innerHTML = `<table>
-    <thead><tr><th>国家</th>${bands.map(b => `<th>${labels[b]}</th>`).join("")}<th>365+ 单件最低</th></tr></thead>
+    <thead><tr><th>国家</th>${bands.map(b => `<th>${labels[b]}</th>`).join("")}<th>365+ 单件最低</th><th>状态</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -1628,7 +1691,13 @@ function renderAgedTable() {
 function renderUtilizationTable() {
   const rows = MARKETPLACES.map(mp => {
     const row = RATES.utilization?.[mp.code] || { thresholds: [], status: "not_loaded", note: "" };
-    const text = (item, key) => item ? fmtMoney(Number(item[key] || 0), mp.currency) : "待补";
+    const text = (item, key, isJpTier) => {
+      if (item) return fmtMoney(Number(item[key] || 0), mp.currency);
+      if ((mp.code === "JP") !== isJpTier) return "不适用";
+      if (String(row.status || "").startsWith("not_applicable")) return "不适用";
+      if (["SG", "TR", "BR"].includes(mp.code)) return "待补";
+      return "官方未列";
+    };
     const tier = (min, max) => (row.thresholds || []).find(item => item.min === min && item.max === max);
     const tiers = [
       [22, 28, "22<周数≤28"],
@@ -1643,7 +1712,8 @@ function renderUtilizationTable() {
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
       ${tiers.map(([min, max, label]) => {
         const found = tier(min, max);
-        return `<td><strong>${label}</strong><div class="subtle">标准 ${text(found, "standard")} / 大件 ${text(found, "oversize")}${found?.jp_fashion ? `<br>JP服装 ${fmtMoney(found.jp_fashion, mp.currency)}` : ""}</div></td>`;
+        const isJpTier = label.startsWith("JP");
+        return `<td><strong>${label}</strong><div class="subtle">标准 ${text(found, "standard", isJpTier)} / 大件 ${text(found, "oversize", isJpTier)}${found?.jp_fashion ? `<br>JP服装 ${fmtMoney(found.jp_fashion, mp.currency)}` : ""}</div></td>`;
       }).join("")}
       <td class="subtle">${row.status}<br>${row.note}</td>
     </tr>`;
