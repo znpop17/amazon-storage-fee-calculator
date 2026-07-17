@@ -703,7 +703,8 @@ const ADDITIONAL_FEE_SOURCES = {
     ["MX 超龄库存附加费", "https://sellercentral.amazon.com.mx/help/hub/reference/external/G200684750", "aged inventory surcharge"]
   ],
   JP: [
-    ["JP 基础月仓储费、仓储利用率附加费", "https://sellercentral.amazon.co.jp/help/hub/reference/external/200612770#mnd_2jc_jcb", "2025-06-01 起"],
+    ["JP 基础月仓储费", "https://sellercentral.amazon.co.jp/help/hub/reference/external/200612770#mnd_2jc_jcb", "按当前日本 Seller Central 官方月仓储费表"],
+    ["JP 仓储利用率附加费", "https://sellercentral.amazon.co.jp/help/hub/reference/external/200612770#mnd_2jc_jcb", "2025-05-01 起；不足26周不收，26周起收取"],
     ["JP 超龄库存附加费", "https://sellercentral.amazon.co.jp/help/hub/reference/external/GMXDT9ELPWWDMDTY", "2026-04-15 起"]
   ],
   AE: [
@@ -831,8 +832,8 @@ function makeDefaults() {
       });
     } else if (mp.code === "JP") {
       Object.assign(monthlyDefaults, {
-        status: "official_pricing_page_1000cm3_converted",
-        note: "Japan public pricing page lists tax-included storage rates per 10cm x 10cm x 10cm; values here are converted to JPY per m3. Tax-included output uses the official values directly; tax-excluded output divides them by 1.10.",
+        status: "official_sellercentral_current",
+        note: "Japan Seller Central lists tax-included storage rates per 10cm x 10cm x 10cm; values here are converted to JPY per m3. Tax-included output uses the official values directly; tax-excluded output divides them by 1.10. The provided table does not list a separate dangerous-goods storage rate, so dangerous goods use the same size-tier rate.",
         standard: { offPeak: 5676, peak: 10087 },
         oversize: { offPeak: 3278, peak: 6984 },
         hazmatStandard: { offPeak: 5676, peak: 10087 },
@@ -976,11 +977,11 @@ function makeDefaults() {
     }
     if (mp.code === "JP") {
       rates.utilization[mp.code] = {
-        status: "official_sellercentral_2025_06_01",
-        note: "Applies above 26 weeks; official tax-included values converted from JPY per 10cm x 10cm x 10cm to JPY per m3.",
+        status: "official_sellercentral_2025_05_01",
+        note: "Official bands: under 26 weeks = 0; 26 <= weeks < 39; 39 <= weeks <= 52; over 52 weeks. Tax-included values are converted from JPY per 10cm x 10cm x 10cm to JPY per m3.",
         thresholds: [
-          { min: 26, max: 39, standard: 1462, oversize: 316, jp_fashion: 817 },
-          { min: 39, max: 52, standard: 3997, oversize: 1023, jp_fashion: 3645 },
+          { min: 26, max: 39, minInclusive: true, maxExclusive: true, standard: 1462, oversize: 316, jp_fashion: 817 },
+          { min: 39, max: 52, minInclusive: true, standard: 3997, oversize: 1023, jp_fashion: 3645 },
           { min: 52, max: Infinity, standard: 16762, oversize: 3842, jp_fashion: 10370 }
         ]
       };
@@ -1126,6 +1127,7 @@ function makeDefaults() {
     if (mp.code === "JP") {
       rates.aged[mp.code] = {
         status: "official_sellercentral_2026_04_15",
+        note: "Official Japan aged-inventory surcharge effective 2026-04-15; rates are stored as tax-included JPY per m3. Inventory over 365 days uses the greater of the volume fee and JPY 20 per unit.",
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1428,7 +1430,11 @@ function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
   if (!row || ratioWeeks <= 0) return 0;
   const category = normalizeStorageCategory(mpCode, storageCategory);
   if (category === "eu_fashion") return 0;
-  const tier = (row.thresholds || []).find(item => ratioWeeks > item.min && ratioWeeks <= item.max);
+  const tier = (row.thresholds || []).find(item => {
+    const meetsMinimum = item.minInclusive ? ratioWeeks >= item.min : ratioWeeks > item.min;
+    const meetsMaximum = item.maxExclusive ? ratioWeeks < item.max : ratioWeeks <= item.max;
+    return meetsMinimum && meetsMaximum;
+  });
   if (!tier) return 0;
   if (mpCode === "JP" && category === "jp_fashion") return Number(tier.jp_fashion || 0);
   return Number(tier[sizeType] || 0);
@@ -1705,8 +1711,8 @@ function renderUtilizationTable() {
       [36, 44, "36<周数≤44"],
       [44, 52, "44<周数≤52"],
       [52, Infinity, "周数>52"],
-      [26, 39, "JP 26<周数≤39"],
-      [39, 52, "JP 39<周数≤52"]
+      [26, 39, "JP 26≤周数<39"],
+      [39, 52, "JP 39≤周数≤52"]
     ];
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
