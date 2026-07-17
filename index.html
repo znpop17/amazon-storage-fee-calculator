@@ -419,7 +419,7 @@
 
         <div class="notice" id="dataNotice"></div>
         <div class="notice ok">
-          单品仓储费需要提供：SKU、国家、测算日期、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按测算日期和周转天数逐月拆分，并自动套用各月淡旺季费率。体积统一保留 6 位，金额按每月每项 4 位小数取值后汇总。
+          单品仓储费需要提供：SKU、国家、测算日期、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按测算日期和周转天数逐月拆分，并自动套用各月淡旺季费率。体积统一四舍五入保留 4 位，金额按每月每项 4 位小数取值后汇总。
         </div>
       </div>
     </section>
@@ -1102,7 +1102,7 @@ let RATES = loadRates();
 let lastResult = null;
 let lastBatchRows = [];
 const MONEY_DECIMALS = 4;
-const VOLUME_DECIMALS = 6;
+const VOLUME_DECIMALS = 4;
 
 const els = Object.fromEntries([
   "sku","marketplace","calculationDate","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","taxMode","billingUnit","length","width","height","weightKg",
