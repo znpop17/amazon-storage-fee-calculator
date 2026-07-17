@@ -313,11 +313,8 @@
         </div>
 
         <div class="grid">
-          <label>计费季节
-            <select id="seasonBand">
-              <option value="offPeak">淡季</option>
-              <option value="peak">旺季</option>
-            </select>
+          <label>测算日期
+            <input id="calculationDate" type="date">
           </label>
         </div>
 
@@ -422,7 +419,7 @@
 
         <div class="notice" id="dataNotice"></div>
         <div class="notice ok">
-          单品仓储费需要提供：SKU、国家、计费季节、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按国家尺寸政策自动判断标准尺寸或大件，再套用对应仓储费率。
+          单品仓储费需要提供：SKU、国家、测算日期、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按测算日期和周转天数逐月拆分，并自动套用各月淡旺季费率。
         </div>
       </div>
     </section>
@@ -436,7 +433,7 @@
         <div class="panel-body stack">
           <div class="results">
             <div class="metric">
-              <span>月仓储基础费</span>
+              <span>周转期基础仓储费</span>
               <strong id="baseFee">-</strong>
               <small id="baseRateText">-</small>
             </div>
@@ -465,11 +462,11 @@
             </div>
             <div>
               <h3>批量 CSV</h3>
-              <p class="subtle">列名：sku,country,season,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band。country 可填中文国家或国家代码；season 填 offPeak 或 peak；tax_mode 填 taxIncluded 或 taxExcluded；仓储利用率周数没有后台数据时填 0。</p>
-              <textarea id="batchInput" spellcheck="false">sku,country,season,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
-SKU-001,美国,offPeak,default,no,taxIncluded,30,20,5,0.5,1,45,0,0_90
-SKU-002,日本,offPeak,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366_455
-SKU-003,德国,offPeak,eu_fashion,no,taxIncluded,30,20,5,0.5,1,45,0,0_90</textarea>
+              <p class="subtle">列名：sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band。calculation_date 填 YYYY-MM-DD，留空默认当天；tax_mode 填 taxIncluded 或 taxExcluded；仓储利用率周数没有后台数据时填 0。</p>
+              <textarea id="batchInput" spellcheck="false">sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
+SKU-001,美国,2026-09-20,default,no,taxIncluded,30,20,5,0.5,1,45,0,0_90
+SKU-002,日本,2026-09-20,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366_455
+SKU-003,德国,2026-09-20,eu_fashion,no,taxIncluded,30,20,5,0.5,1,45,0,0_90</textarea>
               <div class="actions" style="margin-top:10px;">
                 <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden">
                 <button class="ghost" id="importCsvBtn">导入 CSV</button>
@@ -484,7 +481,7 @@ SKU-003,德国,offPeak,eu_fashion,no,taxIncluded,30,20,5,0.5,1,45,0,0_90</textar
             <table>
               <thead>
                 <tr>
-                  <th>SKU</th><th>国家</th><th>季节</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">总费用</th><th>说明</th>
+                  <th>SKU</th><th>国家</th><th>测算区间</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">总费用</th><th>说明</th>
                 </tr>
               </thead>
               <tbody id="batchTable"></tbody>
@@ -637,26 +634,31 @@ const SEASON_WINDOWS = {
   IN: {
     offPeak: "全年统一",
     peak: "全年统一",
+    peakMonths: [],
     note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
   },
   AE: {
     offPeak: "全年统一",
     peak: "全年统一",
+    peakMonths: [],
     note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
   },
   SA: {
     offPeak: "全年统一",
     peak: "全年统一",
+    peakMonths: [],
     note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
   },
   EG: {
     offPeak: "全年统一",
     peak: "全年统一",
+    peakMonths: [],
     note: "公开页面未按淡旺季或尺寸类型拆分，当前按同一月费填入淡季和旺季。"
   },
   DEFAULT: {
     offPeak: "1-9月",
     peak: "10-12月",
+    peakMonths: [10, 11, 12],
     note: "多数公开费率卡按 Jan-Sep / Oct-Dec 切分；未填官方费率的国家需按 Seller Central 页面最终确认。"
   }
 };
@@ -818,14 +820,14 @@ function makeDefaults() {
     } else if (mp.code === "JP") {
       Object.assign(monthlyDefaults, {
         status: "official_pricing_page_1000cm3_converted",
-        note: "Japan public pricing page lists non-clothing/shoes-bags storage rates per 10cm x 10cm x 10cm; values here are converted to JPY per m3. Use the storage category input for Clothing & Fashion Accessories, Shoes & Bags.",
+        note: "Japan public pricing page lists tax-included storage rates per 10cm x 10cm x 10cm; values here are converted to JPY per m3. Tax-included output uses the official values directly; tax-excluded output divides them by 1.10.",
         standard: { offPeak: 5676, peak: 10087 },
         oversize: { offPeak: 3278, peak: 6984 },
         hazmatStandard: { offPeak: 5676, peak: 10087 },
         hazmatOversize: { offPeak: 3278, peak: 6984 },
         categoryOverrides: {
           jp_fashion: {
-            note: "Japan public pricing page lists Clothing & Fashion Accessories, Shoes & Bags at JPY 3.10 / 5.50 per 10cm x 10cm x 10cm; values here are converted to JPY per m3.",
+            note: "Japan public pricing page lists tax-included Clothing & Fashion Accessories, Shoes & Bags rates at JPY 3.10 / 5.50 per 10cm x 10cm x 10cm; values here are converted to JPY per m3.",
             standard: { offPeak: 3100, peak: 5500 },
             oversize: { offPeak: 3100, peak: 5500 },
             hazmatStandard: { offPeak: 3100, peak: 5500 },
@@ -963,7 +965,7 @@ function makeDefaults() {
     if (mp.code === "JP") {
       rates.utilization[mp.code] = {
         status: "official_sellercentral_2025_06_01",
-        note: "Applies above 26 weeks; values converted from JPY per 10cm x 10cm x 10cm to JPY per m3.",
+        note: "Applies above 26 weeks; official tax-included values converted from JPY per 10cm x 10cm x 10cm to JPY per m3.",
         thresholds: [
           { min: 26, max: 39, standard: 1462, oversize: 316, jp_fashion: 817 },
           { min: 39, max: 52, standard: 3997, oversize: 1023, jp_fashion: 3645 },
@@ -1099,18 +1101,17 @@ function makeDefaults() {
 let RATES = loadRates();
 let lastResult = null;
 let lastBatchRows = [];
-const BILLING_DAYS_PER_MONTH = 30;
 
 const els = Object.fromEntries([
-  "sku","marketplace","seasonBand","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","taxMode","billingUnit","length","width","height","weightKg",
+  "sku","marketplace","calculationDate","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","taxMode","billingUnit","length","width","height","weightKg",
   "storageDays","utilizationWeeks","units",
   "ageBand","sourceBadge","dataNotice","baseFee","utilizationFee","agedFee","totalFee","baseRateText",
   "utilizationRateText","agedRateText","perUnitText","formulaText","detailTable","batchInput","batchWrap","batchTable"
 ].map(id => [id, document.getElementById(id)]));
 
-const BATCH_TEMPLATE = `sku,country,season,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
-SKU-001,美国,offPeak,default,no,taxIncluded,30,20,5,0.5,1,45,0,0_90
-SKU-002,日本,offPeak,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366_455`;
+const BATCH_TEMPLATE = `sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
+SKU-001,美国,2026-09-20,default,no,taxIncluded,30,20,5,0.5,1,45,0,0_90
+SKU-002,日本,2026-09-20,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366_455`;
 
 function loadRates() {
   // Fee rates are policy-bound and intentionally ignore old browser-local edits.
@@ -1157,6 +1158,70 @@ function normalizeSeason(value) {
 
 function seasonLabel(value) {
   return normalizeSeason(value) === "peak" ? "旺季" : "淡季";
+}
+
+function todayDateValue() {
+  const now = new Date();
+  const pad = value => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+function normalizeCalculationDate(value) {
+  const raw = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return todayDateValue();
+  const [year, month, day] = raw.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+    ? raw
+    : todayDateValue();
+}
+
+function utcDateFromValue(value) {
+  const [year, month, day] = normalizeCalculationDate(value).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatUtcDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function seasonForMonth(mpCode, month) {
+  const window = SEASON_WINDOWS[mpCode] || SEASON_WINDOWS.DEFAULT;
+  return (window.peakMonths || SEASON_WINDOWS.DEFAULT.peakMonths).includes(month) ? "peak" : "offPeak";
+}
+
+function splitStoragePeriod(mpCode, calculationDate, storageDays) {
+  const startDate = normalizeCalculationDate(calculationDate);
+  const segments = [];
+  const totalDays = Math.max(0, Number(storageDays) || 0);
+  let remaining = totalDays;
+  let cursor = utcDateFromValue(startDate);
+
+  while (remaining > 1e-9) {
+    const year = cursor.getUTCFullYear();
+    const monthIndex = cursor.getUTCMonth();
+    const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+    const availableDays = daysInMonth - cursor.getUTCDate() + 1;
+    const days = Math.min(remaining, availableDays);
+    const seasonBand = seasonForMonth(mpCode, monthIndex + 1);
+    const segmentEnd = new Date(cursor);
+    segmentEnd.setUTCDate(segmentEnd.getUTCDate() + Math.max(0, Math.ceil(days) - 1));
+    segments.push({
+      month: `${year}-${String(monthIndex + 1).padStart(2, "0")}`,
+      startDate: formatUtcDate(cursor),
+      endDate: formatUtcDate(segmentEnd),
+      days,
+      daysInMonth,
+      monthRatio: days / daysInMonth,
+      seasonBand
+    });
+    remaining -= days;
+    cursor = new Date(Date.UTC(year, monthIndex + 1, 1));
+  }
+
+  const endDate = new Date(utcDateFromValue(startDate));
+  endDate.setUTCDate(endDate.getUTCDate() + Math.max(0, Math.ceil(totalDays) - 1));
+  return { startDate, endDate: formatUtcDate(endDate), totalDays, segments };
 }
 
 function normalizeStorageCategory(mpCode, value) {
@@ -1275,8 +1340,8 @@ function taxModeLabel(value) {
   return normalizeTaxMode(value) === "taxIncluded" ? "含税" : "不含税";
 }
 
-function storageTaxRate(mpCode, taxMode) {
-  return mpCode === "JP" && normalizeTaxMode(taxMode) === "taxIncluded" ? 0.1 : 0;
+function storageTaxRate(mpCode) {
+  return mpCode === "JP" ? 0.1 : 0;
 }
 
 function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
@@ -1291,43 +1356,69 @@ function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
   return Number(tier[sizeType] || 0);
 }
 
-function dayRatioFromInput(input) {
-  const storageDays = Number(input.storageDays) || 0;
-  return storageDays / BILLING_DAYS_PER_MONTH;
-}
-
 function calculate(input) {
   const mp = getMarket(input.marketplace);
   const storageCategory = normalizeStorageCategory(mp.code, input.storageCategory);
+  const taxMode = normalizeTaxMode(input.taxMode);
+  const taxRate = storageTaxRate(mp.code);
+  const taxMultiplier = 1 + taxRate;
+  const includeTax = taxMode === "taxIncluded";
   const billUnit = input.billingUnit === "auto" ? mp.unit : input.billingUnit;
   const sizeDecision = classifySizeType(mp.code, input.length, input.width, input.height, input.weightKg);
   const unitVolume = volumeFromDims(input.length, input.width, input.height, "cm", billUnit);
   const units = Number(input.units) || 0;
-  const dayRatio = dayRatioFromInput(input);
-  const billableUnits = units * dayRatio;
-  const totalVolume = unitVolume * billableUnits;
-  const baseRate = monthlyRate(mp.code, input.seasonBand, sizeDecision.type, input.hazmat, storageCategory);
+  const totalInventoryVolume = unitVolume * units;
+  const period = splitStoragePeriod(mp.code, input.calculationDate, input.storageDays);
   const ageBand = normalizeAgeBand(input.ageBand);
   const agedByVolume = agedRate(mp.code, ageBand);
   const utilizationByVolume = utilizationRate(mp.code, input.utilizationWeeks, sizeDecision.type, storageCategory);
   const minPerUnit = Number(RATES.aged[mp.code]?.perUnitMinimumByBand?.[ageBand] ?? RATES.aged[mp.code]?.perUnitMinimum365 ?? 0);
-  const min365 = minPerUnit ? minPerUnit * billableUnits : 0;
   const effectiveAgedByVolume = ["US", "CA"].includes(mp.code) && storageCategory === "us_aged_exempt" && ["181_210", "211_240", "241_270"].includes(ageBand) ? 0 : agedByVolume;
-  const baseFeeExTax = totalVolume * baseRate;
-  const utilizationFeeExTax = totalVolume * utilizationByVolume;
-  const agedFeeExTax = Math.max(totalVolume * effectiveAgedByVolume, min365);
+  const segments = period.segments.map(segment => {
+    const officialBaseRate = monthlyRate(mp.code, segment.seasonBand, sizeDecision.type, input.hazmat, storageCategory);
+    const baseRateExTax = officialBaseRate / taxMultiplier;
+    const baseRate = includeTax ? officialBaseRate : baseRateExTax;
+    const volumeMonths = totalInventoryVolume * segment.monthRatio;
+    const officialBaseFee = volumeMonths * officialBaseRate;
+    const officialUtilizationFee = volumeMonths * utilizationByVolume;
+    const officialAgedMinimum = minPerUnit ? minPerUnit * units * segment.monthRatio : 0;
+    const officialAgedFee = Math.max(volumeMonths * effectiveAgedByVolume, officialAgedMinimum);
+    const baseFeeExTax = officialBaseFee / taxMultiplier;
+    const utilizationFeeExTax = officialUtilizationFee / taxMultiplier;
+    const agedMinimumExTax = officialAgedMinimum / taxMultiplier;
+    const agedFeeExTax = officialAgedFee / taxMultiplier;
+    return {
+      ...segment, officialBaseRate, baseRateExTax, baseRate, volumeMonths,
+      baseFeeExTax, utilizationFeeExTax, agedMinimumExTax, agedFeeExTax,
+      baseFee: includeTax ? officialBaseFee : baseFeeExTax,
+      utilizationFee: includeTax ? officialUtilizationFee : utilizationFeeExTax,
+      agedFee: includeTax ? officialAgedFee : agedFeeExTax
+    };
+  });
+  const sum = key => segments.reduce((total, segment) => total + Number(segment[key] || 0), 0);
+  const monthRatio = sum("monthRatio");
+  const billableUnits = units * monthRatio;
+  const totalVolume = sum("volumeMonths");
+  const fallbackOfficialBaseRate = monthlyRate(mp.code, seasonForMonth(mp.code, utcDateFromValue(period.startDate).getUTCMonth() + 1), sizeDecision.type, input.hazmat, storageCategory);
+  const baseRate = segments[0]?.baseRate || (includeTax ? fallbackOfficialBaseRate : fallbackOfficialBaseRate / taxMultiplier);
+  const min365ExTax = sum("agedMinimumExTax");
+  const min365 = includeTax ? min365ExTax * taxMultiplier : min365ExTax;
+  const baseFeeExTax = sum("baseFeeExTax");
+  const utilizationFeeExTax = sum("utilizationFeeExTax");
+  const agedFeeExTax = sum("agedFeeExTax");
   const subtotalExTax = baseFeeExTax + utilizationFeeExTax + agedFeeExTax;
-  const taxMode = normalizeTaxMode(input.taxMode);
-  const taxRate = storageTaxRate(mp.code, taxMode);
-  const taxMultiplier = 1 + taxRate;
-  const baseFee = baseFeeExTax * taxMultiplier;
-  const utilizationFee = utilizationFeeExTax * taxMultiplier;
-  const agedFee = agedFeeExTax * taxMultiplier;
+  const baseFee = sum("baseFee");
+  const utilizationFee = sum("utilizationFee");
+  const agedFee = sum("agedFee");
   const totalFee = baseFee + utilizationFee + agedFee;
-  const taxAmount = totalFee - subtotalExTax;
+  const taxAmount = includeTax ? totalFee - subtotalExTax : 0;
   return {
-    mp, billUnit, unitVolume, totalVolume, units, dayRatio, billableUnits, sizeDecision,
-    baseRate, utilizationByVolume, agedByVolume: effectiveAgedByVolume, min365, ageBand, storageCategory,
+    mp, billUnit, unitVolume, totalInventoryVolume, totalVolume, units, dayRatio: monthRatio, billableUnits, sizeDecision,
+    calculationDate: period.startDate, calculationEndDate: period.endDate, segments,
+    baseRate,
+    utilizationByVolume: includeTax ? utilizationByVolume : utilizationByVolume / taxMultiplier,
+    agedByVolume: includeTax ? effectiveAgedByVolume : effectiveAgedByVolume / taxMultiplier,
+    min365, ageBand, storageCategory,
     baseFeeExTax, utilizationFeeExTax, agedFeeExTax, subtotalExTax,
     baseFee, utilizationFee, agedFee, totalFee, taxMode, taxRate, taxAmount,
     costPerUnit: units ? totalFee / units : 0,
@@ -1340,7 +1431,7 @@ function currentInput() {
   return {
     sku: els.sku.value.trim(),
     marketplace: els.marketplace.value,
-    seasonBand: els.seasonBand.value,
+    calculationDate: els.calculationDate.value,
     storageCategory: els.storageCategory.value,
     hazmat: els.hazmat.value,
     taxMode: els.taxMode.value,
@@ -1351,7 +1442,6 @@ function currentInput() {
     weightKg: Number(els.weightKg.value),
     storageDays: Number(els.storageDays.value),
     utilizationWeeks: Number(els.utilizationWeeks.value),
-    daysInMonth: BILLING_DAYS_PER_MONTH,
     units: Number(els.units.value),
     ageBand: normalizeAgeBand(els.ageBand.value)
   };
@@ -1380,30 +1470,40 @@ function renderResult() {
   els.utilizationFee.textContent = fmtMoney(r.utilizationFee, r.mp.currency);
   els.agedFee.textContent = fmtMoney(r.agedFee, r.mp.currency);
   els.totalFee.textContent = fmtMoney(r.totalFee, r.mp.currency);
-  els.baseRateText.textContent = `${seasonLabel(r.input.seasonBand)}：${fmtMoney(r.baseRate, r.mp.currency)} / ${r.billUnit}`;
+  const seasonSummary = [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join(" + ") || seasonLabel(seasonForMonth(r.mp.code, utcDateFromValue(r.calculationDate).getUTCMonth() + 1));
+  const rateSummary = [...new Map(r.segments.map(segment => [segment.seasonBand, `${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}`])).values()].join("；") || fmtMoney(r.baseRate, r.mp.currency);
+  els.baseRateText.textContent = `${rateSummary} / ${r.billUnit}/月`;
   els.utilizationRateText.textContent = r.input.utilizationWeeks > 0
     ? `${fmtNum(r.input.utilizationWeeks, 1)} 周：${fmtMoney(r.utilizationByVolume, r.mp.currency)} / ${r.billUnit}`
     : "未填写周数，默认不计";
   els.agedRateText.textContent = `${fmtMoney(r.agedByVolume, r.mp.currency)} / ${r.billUnit}` + (r.min365 ? `，365+ 最低 ${fmtMoney(r.min365, r.mp.currency)}` : "");
   els.perUnitText.textContent = `单件 ${fmtMoney(r.costPerUnit, r.mp.currency)}；${fmtNum(r.units, 0)} 件合计；${taxModeLabel(r.taxMode)}${r.taxRate ? `含税费 ${fmtMoney(r.taxAmount, r.mp.currency)}` : ""}`;
-  els.formulaText.textContent = `${fmtNum(r.unitVolume, 6)} ${r.billUnit} x ${fmtNum(r.input.storageDays, 1)} / ${BILLING_DAYS_PER_MONTH} x 月费率`;
+  els.formulaText.textContent = `总库存体积 x 各月占用天数 / 当月天数 x 当月费率`;
+
+  const segmentBreakdown = r.segments.length
+    ? r.segments.map(segment => `${segment.month}：${fmtNum(segment.days, 1)}/${segment.daysInMonth} 天，${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}/${r.billUnit}/月，基础费 ${fmtMoney(segment.baseFee, r.mp.currency)}（${taxModeLabel(r.taxMode)}）`).join("<br>")
+    : "周转天数为 0，无计费月份";
 
   const rows = [
     ["SKU", r.sku || "-"],
     ["国家", `${countryLabel(r.mp.code)} / ${r.mp.region}`],
-    ["计费季节", `${seasonLabel(r.input.seasonBand)}（具体月份见淡旺季对比表）`],
-    ["费用口径", `${taxModeLabel(r.taxMode)}；税率 ${fmtNum(r.taxRate * 100, 1)}%${r.mp.code === "JP" ? "（日本含税口径叠加 10%）" : "（当前国家未叠加税费）"}`],
+    ["测算日期", r.calculationDate],
+    ["测算区间", `${r.calculationDate} 至 ${r.calculationEndDate}，共 ${fmtNum(r.input.storageDays, 1)} 天（开始日期计入第 1 天）`],
+    ["计费季节", `${seasonSummary}（按测算区间自动判断）`],
+    ["费用口径", `${taxModeLabel(r.taxMode)}；税率 ${fmtNum(r.taxRate * 100, 1)}%${r.mp.code === "JP" ? "（日本官方费率已含 10%；不含税时除以 1.10）" : "（当前国家未叠加税费）"}`],
     ["仓储类目", `${storageCategoryLabel(r.mp.code, r.storageCategory)}；${requirement.required ? "当前国家需要提供类目" : "当前国家无需提供类目"}`],
     ["尺寸类型", `${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / 危险品" : ""}`],
     ["尺寸判断依据", r.sizeDecision.reason],
     ["库存库龄", ageBandLabel(r.ageBand)],
-    ["单品算法", `数量 ${fmtNum(r.units, 0)} × 单品存放/周转 ${fmtNum(r.input.storageDays, 1)} 天 ÷ ${BILLING_DAYS_PER_MONTH} 天/月 = 折算计费数量 ${fmtNum(r.billableUnits, 4)} 件`],
     ["单件体积", `${fmtNum(r.unitVolume, 6)} ${r.billUnit}`],
-    ["折算计费体积", `${fmtNum(r.totalVolume, 4)} ${r.billUnit}`],
-    ["月仓储基础费公式", `${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.baseRate, 4)} = ${fmtMoney(r.baseFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.baseFee, r.mp.currency)}`],
-    ["仓储利用率附加费公式", `${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.utilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.utilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
-    ["库龄附加费公式", `max(${fmtNum(r.totalVolume, 4)} x ${fmtNum(r.agedByVolume, 4)}, ${fmtMoney(r.min365, r.mp.currency)}) = ${fmtMoney(r.agedFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.agedFee, r.mp.currency)}`],
-    ["税费", `${fmtMoney(r.subtotalExTax, r.mp.currency)} × ${fmtNum(r.taxRate * 100, 1)}% = ${fmtMoney(r.taxAmount, r.mp.currency)}`],
+    ["总库存体积", `${fmtNum(r.unitVolume, 6)} × ${fmtNum(r.units, 0)} 件 = ${fmtNum(r.totalInventoryVolume, 4)} ${r.billUnit}`],
+    ["逐月基础费明细", segmentBreakdown],
+    ["周转期基础仓储费", `${fmtMoney(r.baseFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.baseFee, r.mp.currency)}`],
+    ["仓储利用率附加费公式", `总库存体积 × 各月天数/当月天数 × ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.utilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.utilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
+    ["库龄附加费公式", `逐月 max(体积计费, 单件最低费) = ${fmtMoney(r.agedFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.agedFee, r.mp.currency)}`],
+    ["税费", r.taxMode === "taxIncluded"
+      ? `${fmtMoney(r.subtotalExTax, r.mp.currency)} × ${fmtNum(r.taxRate * 100, 1)}% = ${fmtMoney(r.taxAmount, r.mp.currency)}`
+      : `不含税口径，结果未叠加 ${fmtNum(r.taxRate * 100, 1)}% 消费税`],
     ["官方页面", `<a href="${r.mp.url}" target="_blank" rel="noopener">${r.mp.pageType}</a>`]
   ];
   els.detailTable.innerHTML = rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("");
@@ -1419,7 +1519,7 @@ function initSelectors() {
     `<optgroup label="${region}">${items.map(mp => `<option value="${mp.code}">${countryLabel(mp.code)} - ${mp.currency}</option>`).join("")}</optgroup>`
   ).join("");
   els.marketplace.value = "US";
-  els.seasonBand.value = "offPeak";
+  els.calculationDate.value = todayDateValue();
 }
 
 function renderRateTables() {
@@ -1579,7 +1679,7 @@ function batchCalculate() {
     const result = calculate({
       sku: row.sku || row.SKU || "",
       marketplace: row.country || row.marketplace || "US",
-      seasonBand: normalizeSeason(row.season || row.season_band || "offPeak"),
+      calculationDate: normalizeCalculationDate(row.calculation_date || row.calculationDate),
       storageCategory: row.storage_category || row.category || "default",
       hazmat: row.hazmat || "no",
       taxMode: normalizeTaxMode(row.tax_mode || row.taxMode || "taxIncluded"),
@@ -1591,7 +1691,6 @@ function batchCalculate() {
       units: Number(row.quantity || row.units || 1),
       storageDays: Number(row.storage_days || 0),
       utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
-      daysInMonth: BILLING_DAYS_PER_MONTH,
       ageBand: normalizeAgeBand(row.age_band)
     });
     return result;
@@ -1600,7 +1699,7 @@ function batchCalculate() {
   els.batchTable.innerHTML = lastBatchRows.map(r => `<tr>
     <td>${r.sku || "-"}</td>
     <td>${countryLabel(r.mp.code)}</td>
-    <td>${seasonLabel(r.input.seasonBand)}</td>
+    <td>${r.calculationDate}<br><span class="subtle">至 ${r.calculationEndDate}</span></td>
     <td>${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / hazmat" : ""}<div class="subtle">${storageCategoryLabel(r.mp.code, r.storageCategory)}</div></td>
     <td class="num">${fmtNum(r.units, 0)}</td>
     <td class="num">${fmtNum(r.unitVolume, 6)} ${r.billUnit}</td>
@@ -1611,9 +1710,9 @@ function batchCalculate() {
 
 function downloadCsv() {
   if (!lastBatchRows.length) batchCalculate();
-  const header = ["sku","country","marketplace","season","storage_category","tax_mode","tax_rate","tax_amount","currency","size_type","quantity","storage_days","utilization_weeks","billable_units","billing_unit","unit_volume","billable_volume","base_fee_ex_tax","utilization_fee_ex_tax","aged_fee_ex_tax","subtotal_ex_tax","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
+  const header = ["sku","country","marketplace","calculation_date","calculation_end_date","season_summary","storage_category","tax_mode","tax_rate","tax_amount","currency","size_type","quantity","storage_days","utilization_weeks","billing_unit","unit_volume","total_inventory_volume","volume_months","base_fee_ex_tax","utilization_fee_ex_tax","aged_fee_ex_tax","subtotal_ex_tax","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
   const rows = lastBatchRows.map(r => [
-    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, normalizeSeason(r.input.seasonBand), r.storageCategory, r.taxMode, r.taxRate, r.taxAmount, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.billableUnits, r.billUnit, r.unitVolume, r.totalVolume,
+    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, r.calculationDate, r.calculationEndDate, [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join("+"), r.storageCategory, r.taxMode, r.taxRate, r.taxAmount, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.billUnit, r.unitVolume, r.totalInventoryVolume, r.totalVolume,
     r.baseFeeExTax, r.utilizationFeeExTax, r.agedFeeExTax, r.subtotalExTax,
     r.baseFee, r.utilizationFee, r.agedFee, r.totalFee, r.costPerUnit,
     RATES.monthly[r.mp.code]?.status || ""
@@ -1672,15 +1771,17 @@ function copyResult() {
   const text = [
     `SKU：${r.sku || "-"}`,
     `国家：${countryLabel(r.mp.code)}`,
-    `计费季节：${seasonLabel(r.input.seasonBand)}`,
+    `测算日期：${r.calculationDate}`,
+    `测算区间：${r.calculationDate} 至 ${r.calculationEndDate}（${fmtNum(r.input.storageDays, 1)} 天）`,
+    `计费季节：${[...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join(" + ") || "无"}`,
     `费用口径：${taxModeLabel(r.taxMode)}；税率 ${fmtNum(r.taxRate * 100, 1)}%；税费 ${fmtMoney(r.taxAmount, r.mp.currency)}`,
     `仓储类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}`,
     `尺寸类型：${r.sizeDecision.label}`,
     `单件体积：${fmtNum(r.unitVolume, 6)} ${r.billUnit}`,
-    `单品存放/周转天数：${fmtNum(r.input.storageDays, 1)} 天（按 ${BILLING_DAYS_PER_MONTH} 天/月折算）`,
+    `总库存体积：${fmtNum(r.totalInventoryVolume, 4)} ${r.billUnit}`,
+    `单品存放/周转天数：${fmtNum(r.input.storageDays, 1)} 天`,
     `仓储利用率周数：${fmtNum(r.input.utilizationWeeks, 1)}`,
-    `折算计费体积：${fmtNum(r.totalVolume, 4)} ${r.billUnit}`,
-    `基础费：${fmtMoney(r.baseFee, r.mp.currency)}`,
+    `周转期基础仓储费：${fmtMoney(r.baseFee, r.mp.currency)}`,
     `仓储利用率附加费：${fmtMoney(r.utilizationFee, r.mp.currency)}`,
     `库龄附加费：${fmtMoney(r.agedFee, r.mp.currency)}`,
     `总费用：${fmtMoney(r.totalFee, r.mp.currency)}`,
@@ -1698,7 +1799,7 @@ function bindEvents() {
   document.getElementById("resetBtn").addEventListener("click", () => {
     els.sku.value = "";
     els.marketplace.value = "US";
-    els.seasonBand.value = "offPeak";
+    els.calculationDate.value = todayDateValue();
     els.storageCategory.value = "default";
     els.hazmat.value = "no";
     els.taxMode.value = "taxIncluded";
@@ -1758,7 +1859,7 @@ function storageApiResult(item) {
   const result = calculate({
     sku: row.sku || row.SKU || "",
     marketplace: row.country || row.marketplace || "US",
-    seasonBand: normalizeSeason(row.season || row.season_band || "offPeak"),
+    calculationDate: normalizeCalculationDate(row.calculation_date || row.calculationDate),
     storageCategory: row.storage_category || row.category || "default",
     hazmat: row.hazmat || row.is_hazmat || "no",
     taxMode: normalizeTaxMode(row.tax_mode || row.taxMode || "taxIncluded"),
@@ -1770,7 +1871,6 @@ function storageApiResult(item) {
     units: Number(row.quantity || row.units || 1),
     storageDays: Number(row.storage_days || row.inventory_turnover_days || row.turnover_days || 0),
     utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
-    daysInMonth: BILLING_DAYS_PER_MONTH,
     ageBand: normalizeAgeBand(row.age_band)
   });
   return {
@@ -1779,7 +1879,9 @@ function storageApiResult(item) {
     country: COUNTRY_NAMES[result.mp.code] || result.mp.code,
     marketplace: result.mp.code,
     currency: result.mp.currency,
-    storage_season: normalizeSeason(result.input.seasonBand),
+    storage_calculation_date: result.calculationDate,
+    storage_calculation_end_date: result.calculationEndDate,
+    storage_season: [...new Set(result.segments.map(segment => normalizeSeason(segment.seasonBand)))].join("+"),
     storage_category: result.storageCategory,
     storage_category_label: storageCategoryLabel(result.mp.code, result.storageCategory),
     storage_category_required: categoryRequirement(result.mp.code).required,
@@ -1793,7 +1895,8 @@ function storageApiResult(item) {
     storage_size_type: result.sizeDecision.type,
     storage_billing_unit: result.billUnit,
     storage_unit_volume: result.unitVolume,
-    storage_billable_volume: result.totalVolume,
+    storage_total_inventory_volume: result.totalInventoryVolume,
+    storage_volume_months: result.totalVolume,
     storage_base_fee_ex_tax_local: result.baseFeeExTax,
     storage_utilization_fee_ex_tax_local: result.utilizationFeeExTax,
     storage_aged_fee_ex_tax_local: result.agedFeeExTax,
