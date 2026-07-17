@@ -419,7 +419,7 @@
 
         <div class="notice" id="dataNotice"></div>
         <div class="notice ok">
-          单品仓储费需要提供：SKU、国家、测算日期、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按测算日期和周转天数逐月拆分，并自动套用各月淡旺季费率。
+          单品仓储费需要提供：SKU、国家、测算日期、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按测算日期和周转天数逐月拆分，并自动套用各月淡旺季费率。体积统一保留 6 位，金额按每月每项 4 位小数取值后汇总。
         </div>
       </div>
     </section>
@@ -1101,6 +1101,8 @@ function makeDefaults() {
 let RATES = loadRates();
 let lastResult = null;
 let lastBatchRows = [];
+const MONEY_DECIMALS = 4;
+const VOLUME_DECIMALS = 6;
 
 const els = Object.fromEntries([
   "sku","marketplace","calculationDate","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","taxMode","billingUnit","length","width","height","weightKg",
@@ -1133,12 +1135,39 @@ function mergeRates(base, patch) {
 
 function fmtMoney(value, currency) {
   if (!Number.isFinite(value)) return "-";
-  return new Intl.NumberFormat("zh-CN", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: MONEY_DECIMALS,
+    maximumFractionDigits: MONEY_DECIMALS
+  }).format(value);
 }
 
 function fmtNum(value, digits = 4) {
   if (!Number.isFinite(value)) return "-";
   return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: digits }).format(value);
+}
+
+function roundTo(value, decimals) {
+  if (!Number.isFinite(value)) return 0;
+  const factor = 10 ** decimals;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+function roundMoney(value) {
+  return roundTo(value, MONEY_DECIMALS);
+}
+
+function roundVolume(value) {
+  return roundTo(value, VOLUME_DECIMALS);
+}
+
+function fmtVolume(value) {
+  if (!Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("zh-CN", {
+    minimumFractionDigits: VOLUME_DECIMALS,
+    maximumFractionDigits: VOLUME_DECIMALS
+  }).format(value);
 }
 
 function normalizeCountryCode(value) {
@@ -1365,9 +1394,9 @@ function calculate(input) {
   const includeTax = taxMode === "taxIncluded";
   const billUnit = input.billingUnit === "auto" ? mp.unit : input.billingUnit;
   const sizeDecision = classifySizeType(mp.code, input.length, input.width, input.height, input.weightKg);
-  const unitVolume = volumeFromDims(input.length, input.width, input.height, "cm", billUnit);
+  const unitVolume = roundVolume(volumeFromDims(input.length, input.width, input.height, "cm", billUnit));
   const units = Number(input.units) || 0;
-  const totalInventoryVolume = unitVolume * units;
+  const totalInventoryVolume = roundVolume(unitVolume * units);
   const period = splitStoragePeriod(mp.code, input.calculationDate, input.storageDays);
   const ageBand = normalizeAgeBand(input.ageBand);
   const agedByVolume = agedRate(mp.code, ageBand);
@@ -1379,14 +1408,14 @@ function calculate(input) {
     const baseRateExTax = officialBaseRate / taxMultiplier;
     const baseRate = includeTax ? officialBaseRate : baseRateExTax;
     const volumeMonths = totalInventoryVolume * segment.monthRatio;
-    const officialBaseFee = volumeMonths * officialBaseRate;
-    const officialUtilizationFee = volumeMonths * utilizationByVolume;
-    const officialAgedMinimum = minPerUnit ? minPerUnit * units * segment.monthRatio : 0;
-    const officialAgedFee = Math.max(volumeMonths * effectiveAgedByVolume, officialAgedMinimum);
-    const baseFeeExTax = officialBaseFee / taxMultiplier;
-    const utilizationFeeExTax = officialUtilizationFee / taxMultiplier;
-    const agedMinimumExTax = officialAgedMinimum / taxMultiplier;
-    const agedFeeExTax = officialAgedFee / taxMultiplier;
+    const officialBaseFee = roundMoney(volumeMonths * officialBaseRate);
+    const officialUtilizationFee = roundMoney(volumeMonths * utilizationByVolume);
+    const officialAgedMinimum = roundMoney(minPerUnit ? minPerUnit * units * segment.monthRatio : 0);
+    const officialAgedFee = roundMoney(Math.max(volumeMonths * effectiveAgedByVolume, officialAgedMinimum));
+    const baseFeeExTax = roundMoney(officialBaseFee / taxMultiplier);
+    const utilizationFeeExTax = roundMoney(officialUtilizationFee / taxMultiplier);
+    const agedMinimumExTax = roundMoney(officialAgedMinimum / taxMultiplier);
+    const agedFeeExTax = roundMoney(officialAgedFee / taxMultiplier);
     return {
       ...segment, officialBaseRate, baseRateExTax, baseRate, volumeMonths,
       baseFeeExTax, utilizationFeeExTax, agedMinimumExTax, agedFeeExTax,
@@ -1395,23 +1424,24 @@ function calculate(input) {
       agedFee: includeTax ? officialAgedFee : agedFeeExTax
     };
   });
-  const sum = key => segments.reduce((total, segment) => total + Number(segment[key] || 0), 0);
-  const monthRatio = sum("monthRatio");
+  const sumRaw = key => segments.reduce((total, segment) => total + Number(segment[key] || 0), 0);
+  const sumMoney = key => roundMoney(sumRaw(key));
+  const monthRatio = sumRaw("monthRatio");
   const billableUnits = units * monthRatio;
-  const totalVolume = sum("volumeMonths");
+  const totalVolume = roundVolume(sumRaw("volumeMonths"));
   const fallbackOfficialBaseRate = monthlyRate(mp.code, seasonForMonth(mp.code, utcDateFromValue(period.startDate).getUTCMonth() + 1), sizeDecision.type, input.hazmat, storageCategory);
   const baseRate = segments[0]?.baseRate || (includeTax ? fallbackOfficialBaseRate : fallbackOfficialBaseRate / taxMultiplier);
-  const min365ExTax = sum("agedMinimumExTax");
-  const min365 = includeTax ? min365ExTax * taxMultiplier : min365ExTax;
-  const baseFeeExTax = sum("baseFeeExTax");
-  const utilizationFeeExTax = sum("utilizationFeeExTax");
-  const agedFeeExTax = sum("agedFeeExTax");
-  const subtotalExTax = baseFeeExTax + utilizationFeeExTax + agedFeeExTax;
-  const baseFee = sum("baseFee");
-  const utilizationFee = sum("utilizationFee");
-  const agedFee = sum("agedFee");
-  const totalFee = baseFee + utilizationFee + agedFee;
-  const taxAmount = includeTax ? totalFee - subtotalExTax : 0;
+  const min365ExTax = sumMoney("agedMinimumExTax");
+  const min365 = includeTax ? roundMoney(min365ExTax * taxMultiplier) : min365ExTax;
+  const baseFeeExTax = sumMoney("baseFeeExTax");
+  const utilizationFeeExTax = sumMoney("utilizationFeeExTax");
+  const agedFeeExTax = sumMoney("agedFeeExTax");
+  const subtotalExTax = roundMoney(baseFeeExTax + utilizationFeeExTax + agedFeeExTax);
+  const baseFee = sumMoney("baseFee");
+  const utilizationFee = sumMoney("utilizationFee");
+  const agedFee = sumMoney("agedFee");
+  const totalFee = roundMoney(baseFee + utilizationFee + agedFee);
+  const taxAmount = includeTax ? roundMoney(totalFee - subtotalExTax) : 0;
   return {
     mp, billUnit, unitVolume, totalInventoryVolume, totalVolume, units, dayRatio: monthRatio, billableUnits, sizeDecision,
     calculationDate: period.startDate, calculationEndDate: period.endDate, segments,
@@ -1421,7 +1451,7 @@ function calculate(input) {
     min365, ageBand, storageCategory,
     baseFeeExTax, utilizationFeeExTax, agedFeeExTax, subtotalExTax,
     baseFee, utilizationFee, agedFee, totalFee, taxMode, taxRate, taxAmount,
-    costPerUnit: units ? totalFee / units : 0,
+    costPerUnit: units ? roundMoney(totalFee / units) : 0,
     sku: input.sku || "",
     input
   };
@@ -1495,14 +1525,14 @@ function renderResult() {
     ["尺寸类型", `${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / 危险品" : ""}`],
     ["尺寸判断依据", r.sizeDecision.reason],
     ["库存库龄", ageBandLabel(r.ageBand)],
-    ["单件体积", `${fmtNum(r.unitVolume, 6)} ${r.billUnit}`],
-    ["总库存体积", `${fmtNum(r.unitVolume, 6)} × ${fmtNum(r.units, 0)} 件 = ${fmtNum(r.totalInventoryVolume, 4)} ${r.billUnit}`],
+    ["单件体积", `${fmtVolume(r.unitVolume)} ${r.billUnit}`],
+    ["总库存体积", `${fmtVolume(r.unitVolume)} × ${fmtNum(r.units, 0)} 件 = ${fmtVolume(r.totalInventoryVolume)} ${r.billUnit}`],
     ["逐月基础费明细", segmentBreakdown],
     ["周转期基础仓储费", `${fmtMoney(r.baseFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.baseFee, r.mp.currency)}`],
     ["仓储利用率附加费公式", `总库存体积 × 各月天数/当月天数 × ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.utilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.utilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
     ["库龄附加费公式", `逐月 max(体积计费, 单件最低费) = ${fmtMoney(r.agedFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.agedFee, r.mp.currency)}`],
     ["税费", r.taxMode === "taxIncluded"
-      ? `${fmtMoney(r.subtotalExTax, r.mp.currency)} × ${fmtNum(r.taxRate * 100, 1)}% = ${fmtMoney(r.taxAmount, r.mp.currency)}`
+      ? `含税结果 ${fmtMoney(r.totalFee, r.mp.currency)} − 不含税结果 ${fmtMoney(r.subtotalExTax, r.mp.currency)} = ${fmtMoney(r.taxAmount, r.mp.currency)}（税率 ${fmtNum(r.taxRate * 100, 1)}%）`
       : `不含税口径，结果未叠加 ${fmtNum(r.taxRate * 100, 1)}% 消费税`],
     ["官方页面", `<a href="${r.mp.url}" target="_blank" rel="noopener">${r.mp.pageType}</a>`]
   ];
@@ -1702,7 +1732,7 @@ function batchCalculate() {
     <td>${r.calculationDate}<br><span class="subtle">至 ${r.calculationEndDate}</span></td>
     <td>${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / hazmat" : ""}<div class="subtle">${storageCategoryLabel(r.mp.code, r.storageCategory)}</div></td>
     <td class="num">${fmtNum(r.units, 0)}</td>
-    <td class="num">${fmtNum(r.unitVolume, 6)} ${r.billUnit}</td>
+    <td class="num">${fmtVolume(r.unitVolume)} ${r.billUnit}</td>
     <td class="num">${fmtMoney(r.totalFee, r.mp.currency)}</td>
     <td>${RATES.monthly[r.mp.code]?.status || ""}</td>
   </tr>`).join("");
@@ -1710,11 +1740,13 @@ function batchCalculate() {
 
 function downloadCsv() {
   if (!lastBatchRows.length) batchCalculate();
+  const csvMoney = value => Number(value || 0).toFixed(MONEY_DECIMALS);
+  const csvVolume = value => Number(value || 0).toFixed(VOLUME_DECIMALS);
   const header = ["sku","country","marketplace","calculation_date","calculation_end_date","season_summary","storage_category","tax_mode","tax_rate","tax_amount","currency","size_type","quantity","storage_days","utilization_weeks","billing_unit","unit_volume","total_inventory_volume","volume_months","base_fee_ex_tax","utilization_fee_ex_tax","aged_fee_ex_tax","subtotal_ex_tax","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
   const rows = lastBatchRows.map(r => [
-    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, r.calculationDate, r.calculationEndDate, [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join("+"), r.storageCategory, r.taxMode, r.taxRate, r.taxAmount, r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.billUnit, r.unitVolume, r.totalInventoryVolume, r.totalVolume,
-    r.baseFeeExTax, r.utilizationFeeExTax, r.agedFeeExTax, r.subtotalExTax,
-    r.baseFee, r.utilizationFee, r.agedFee, r.totalFee, r.costPerUnit,
+    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, r.calculationDate, r.calculationEndDate, [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join("+"), r.storageCategory, r.taxMode, r.taxRate, csvMoney(r.taxAmount), r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.billUnit, csvVolume(r.unitVolume), csvVolume(r.totalInventoryVolume), csvVolume(r.totalVolume),
+    csvMoney(r.baseFeeExTax), csvMoney(r.utilizationFeeExTax), csvMoney(r.agedFeeExTax), csvMoney(r.subtotalExTax),
+    csvMoney(r.baseFee), csvMoney(r.utilizationFee), csvMoney(r.agedFee), csvMoney(r.totalFee), csvMoney(r.costPerUnit),
     RATES.monthly[r.mp.code]?.status || ""
   ]);
   const csv = [header, ...rows].map(row => row.map(v => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
@@ -1777,8 +1809,8 @@ function copyResult() {
     `费用口径：${taxModeLabel(r.taxMode)}；税率 ${fmtNum(r.taxRate * 100, 1)}%；税费 ${fmtMoney(r.taxAmount, r.mp.currency)}`,
     `仓储类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}`,
     `尺寸类型：${r.sizeDecision.label}`,
-    `单件体积：${fmtNum(r.unitVolume, 6)} ${r.billUnit}`,
-    `总库存体积：${fmtNum(r.totalInventoryVolume, 4)} ${r.billUnit}`,
+    `单件体积：${fmtVolume(r.unitVolume)} ${r.billUnit}`,
+    `总库存体积：${fmtVolume(r.totalInventoryVolume)} ${r.billUnit}`,
     `单品存放/周转天数：${fmtNum(r.input.storageDays, 1)} 天`,
     `仓储利用率周数：${fmtNum(r.input.utilizationWeeks, 1)}`,
     `周转期基础仓储费：${fmtMoney(r.baseFee, r.mp.currency)}`,
