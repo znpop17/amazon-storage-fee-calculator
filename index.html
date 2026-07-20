@@ -1143,7 +1143,7 @@ function makeDefaults() {
 let RATES = loadRates();
 let lastResult = null;
 let lastBatchRows = [];
-const MONEY_DECIMALS = 4;
+const MONEY_DECIMALS = 2;
 const VOLUME_DECIMALS = 4;
 
 const els = Object.fromEntries([
@@ -1182,6 +1182,16 @@ function fmtMoney(value, currency) {
     currency,
     minimumFractionDigits: MONEY_DECIMALS,
     maximumFractionDigits: MONEY_DECIMALS
+  }).format(value);
+}
+
+function fmtRate(value, currency) {
+  if (!Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 20
   }).format(value);
 }
 
@@ -1608,10 +1618,10 @@ function calculate(input) {
       && storageCategory === "eu_fashion"
       && check.ageBand === "241_270";
     const effectiveAgedByVolume = usCaAgedExempt || euAgedExempt ? 0 : agedByVolume;
-    const officialUnitAgedMinimum = roundMoney(minPerUnit);
-    const officialUnitAgedFee = roundMoney(Math.max(unitVolume * effectiveAgedByVolume, officialUnitAgedMinimum));
-    const unitAgedMinimumExTax = roundMoney(officialUnitAgedMinimum / taxMultiplier);
-    const unitAgedFeeExTax = roundMoney(officialUnitAgedFee / taxMultiplier);
+    const officialUnitAgedMinimum = minPerUnit;
+    const officialUnitAgedFee = Math.max(unitVolume * effectiveAgedByVolume, officialUnitAgedMinimum);
+    const unitAgedMinimumExTax = officialUnitAgedMinimum / taxMultiplier;
+    const unitAgedFeeExTax = officialUnitAgedFee / taxMultiplier;
     return {
       ...check,
       agedByVolume: includeTax ? effectiveAgedByVolume : effectiveAgedByVolume / taxMultiplier,
@@ -1626,45 +1636,51 @@ function calculate(input) {
     const baseRateExTax = officialBaseRate / taxMultiplier;
     const baseRate = includeTax ? officialBaseRate : baseRateExTax;
     const unitVolumeMonths = unitVolume * segment.monthRatio;
-    const officialUnitBaseFee = roundMoney(unitVolumeMonths * officialBaseRate);
-    const officialUnitUtilizationFee = roundMoney(unitVolumeMonths * utilizationByVolume);
-    const unitBaseFeeExTax = roundMoney(officialUnitBaseFee / taxMultiplier);
-    const unitUtilizationFeeExTax = roundMoney(officialUnitUtilizationFee / taxMultiplier);
+    const officialUnitBaseFee = unitVolumeMonths * officialBaseRate;
+    const officialUnitUtilizationFee = unitVolumeMonths * utilizationByVolume;
+    const unitBaseFeeExTax = officialUnitBaseFee / taxMultiplier;
+    const unitUtilizationFeeExTax = officialUnitUtilizationFee / taxMultiplier;
     const unitBaseFee = includeTax ? officialUnitBaseFee : unitBaseFeeExTax;
     const unitUtilizationFee = includeTax ? officialUnitUtilizationFee : unitUtilizationFeeExTax;
     return {
       ...segment, officialBaseRate, baseRateExTax, baseRate, unitVolumeMonths,
       unitBaseFeeExTax, unitUtilizationFeeExTax,
       unitBaseFee, unitUtilizationFee,
-      baseFeeExTax: roundMoney(unitBaseFeeExTax * units),
-      utilizationFeeExTax: roundMoney(unitUtilizationFeeExTax * units),
-      baseFee: roundMoney(unitBaseFee * units),
-      utilizationFee: roundMoney(unitUtilizationFee * units)
+      baseFeeExTax: unitBaseFeeExTax * units,
+      utilizationFeeExTax: unitUtilizationFeeExTax * units,
+      baseFee: unitBaseFee * units,
+      utilizationFee: unitUtilizationFee * units
     };
   });
   const sumRaw = key => segments.reduce((total, segment) => total + Number(segment[key] || 0), 0);
-  const sumMoney = key => roundMoney(sumRaw(key));
   const monthRatio = sumRaw("monthRatio");
   const fallbackOfficialBaseRate = monthlyRate(mp.code, seasonForMonth(mp.code, utcDateFromValue(period.startDate).getUTCMonth() + 1), sizeDecision.type, input.hazmat, storageCategory);
   const baseRate = segments[0]?.baseRate || (includeTax ? fallbackOfficialBaseRate : fallbackOfficialBaseRate / taxMultiplier);
-  const sumAgedChecks = key => roundMoney(agedChecks.reduce((total, check) => total + Number(check[key] || 0), 0));
-  const unitMin365ExTax = sumAgedChecks("unitAgedMinimumExTax");
-  const min365 = includeTax ? roundMoney(unitMin365ExTax * taxMultiplier) : unitMin365ExTax;
-  const unitBaseFeeExTax = sumMoney("unitBaseFeeExTax");
-  const unitUtilizationFeeExTax = sumMoney("unitUtilizationFeeExTax");
-  const unitAgedFeeExTax = sumAgedChecks("unitAgedFeeExTax");
-  const unitSubtotalExTax = roundMoney(unitBaseFeeExTax + unitUtilizationFeeExTax + unitAgedFeeExTax);
-  const unitBaseFee = sumMoney("unitBaseFee");
-  const unitUtilizationFee = sumMoney("unitUtilizationFee");
-  const unitAgedFee = sumAgedChecks("unitAgedFee");
-  const costPerUnit = roundMoney(unitBaseFee + unitUtilizationFee + unitAgedFee);
-  const baseFeeExTax = roundMoney(unitBaseFeeExTax * units);
-  const utilizationFeeExTax = roundMoney(unitUtilizationFeeExTax * units);
-  const agedFeeExTax = roundMoney(unitAgedFeeExTax * units);
-  const subtotalExTax = roundMoney(unitSubtotalExTax * units);
-  const baseFee = roundMoney(unitBaseFee * units);
-  const utilizationFee = roundMoney(unitUtilizationFee * units);
-  const agedFee = roundMoney(unitAgedFee * units);
+  const sumAgedChecks = key => agedChecks.reduce((total, check) => total + Number(check[key] || 0), 0);
+  const unitMin365ExTaxRaw = sumAgedChecks("unitAgedMinimumExTax");
+  const min365 = roundMoney(includeTax ? unitMin365ExTaxRaw * taxMultiplier : unitMin365ExTaxRaw);
+  const unitBaseFeeExTaxRaw = sumRaw("unitBaseFeeExTax");
+  const unitUtilizationFeeExTaxRaw = sumRaw("unitUtilizationFeeExTax");
+  const unitAgedFeeExTaxRaw = sumAgedChecks("unitAgedFeeExTax");
+  const unitSubtotalExTaxRaw = unitBaseFeeExTaxRaw + unitUtilizationFeeExTaxRaw + unitAgedFeeExTaxRaw;
+  const unitBaseFeeRaw = sumRaw("unitBaseFee");
+  const unitUtilizationFeeRaw = sumRaw("unitUtilizationFee");
+  const unitAgedFeeRaw = sumAgedChecks("unitAgedFee");
+  const costPerUnit = roundMoney(unitBaseFeeRaw + unitUtilizationFeeRaw + unitAgedFeeRaw);
+  const unitBaseFeeExTax = roundMoney(unitBaseFeeExTaxRaw);
+  const unitUtilizationFeeExTax = roundMoney(unitUtilizationFeeExTaxRaw);
+  const unitAgedFeeExTax = roundMoney(unitAgedFeeExTaxRaw);
+  const unitSubtotalExTax = roundMoney(unitSubtotalExTaxRaw);
+  const unitBaseFee = roundMoney(unitBaseFeeRaw);
+  const unitUtilizationFee = roundMoney(unitUtilizationFeeRaw);
+  const unitAgedFee = roundMoney(unitAgedFeeRaw);
+  const baseFeeExTax = roundMoney(unitBaseFeeExTaxRaw * units);
+  const utilizationFeeExTax = roundMoney(unitUtilizationFeeExTaxRaw * units);
+  const agedFeeExTax = roundMoney(unitAgedFeeExTaxRaw * units);
+  const subtotalExTax = roundMoney(unitSubtotalExTaxRaw * units);
+  const baseFee = roundMoney(unitBaseFeeRaw * units);
+  const utilizationFee = roundMoney(unitUtilizationFeeRaw * units);
+  const agedFee = roundMoney(unitAgedFeeRaw * units);
   const totalFee = roundMoney(costPerUnit * units);
   const taxAmount = includeTax ? roundMoney(totalFee - subtotalExTax) : 0;
   return {
@@ -1752,10 +1768,10 @@ function renderResult() {
   els.agedFee.textContent = fmtMoney(r.unitAgedFee, r.mp.currency);
   els.totalFee.textContent = fmtMoney(r.costPerUnit, r.mp.currency);
   const seasonSummary = [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join(" + ") || seasonLabel(seasonForMonth(r.mp.code, utcDateFromValue(r.calculationDate).getUTCMonth() + 1));
-  const rateSummary = [...new Map(r.segments.map(segment => [segment.seasonBand, `${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}`])).values()].join("；") || fmtMoney(r.baseRate, r.mp.currency);
+  const rateSummary = [...new Map(r.segments.map(segment => [segment.seasonBand, `${seasonLabel(segment.seasonBand)} ${fmtRate(segment.baseRate, r.mp.currency)}`])).values()].join("；") || fmtRate(r.baseRate, r.mp.currency);
   els.baseRateText.textContent = `${rateSummary} / ${r.billUnit}/月`;
   els.utilizationRateText.textContent = r.input.utilizationWeeks > 0
-    ? `${fmtNum(r.input.utilizationWeeks, 1)} 周：${fmtMoney(r.utilizationByVolume, r.mp.currency)} / ${r.billUnit}`
+    ? `${fmtNum(r.input.utilizationWeeks, 1)} 周：${fmtRate(r.utilizationByVolume, r.mp.currency)} / ${r.billUnit}`
     : "未填写周数，默认不计";
   els.agedRateText.textContent = r.agedChecks.length
     ? `${r.agedChecks.length} 次核查：${r.agedChecks.map(check => `${check.checkDate} ${check.ageDays}天`).join("；")}`
@@ -1764,10 +1780,10 @@ function renderResult() {
   els.formulaText.textContent = `单件费用逐月计算，合计费用 = 单件费用 x 数量`;
 
   const segmentBreakdown = r.segments.length
-    ? r.segments.map(segment => `${segment.month}：${fmtNum(segment.days, 0)}/${segment.daysInMonth} 天，${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}/${r.billUnit}/月，单件基础费 ${fmtMoney(segment.unitBaseFee, r.mp.currency)}，${fmtNum(r.units, 0)} 件合计 ${fmtMoney(segment.baseFee, r.mp.currency)}（${taxModeLabel(r.taxMode, r.mp.code)}）`).join("<br>")
+    ? r.segments.map(segment => `${segment.month}：${fmtNum(segment.days, 0)}/${segment.daysInMonth} 天，${seasonLabel(segment.seasonBand)} ${fmtRate(segment.baseRate, r.mp.currency)}/${r.billUnit}/月，单件基础费 ${fmtMoney(segment.unitBaseFee, r.mp.currency)}，${fmtNum(r.units, 0)} 件合计 ${fmtMoney(segment.baseFee, r.mp.currency)}（${taxModeLabel(r.taxMode, r.mp.code)}）`).join("<br>")
     : "周转天数为 0，无计费月份";
   const agedCheckBreakdown = r.agedChecks.length
-    ? r.agedChecks.map(check => `${check.checkDate}：库龄 ${check.ageDays} 天，${ageBandLabel(check.ageBand)}，费率 ${fmtMoney(check.agedByVolume, r.mp.currency)}/${r.billUnit}，单件费 ${fmtMoney(check.unitAgedFee, r.mp.currency)}`).join("<br>")
+    ? r.agedChecks.map(check => `${check.checkDate}：库龄 ${check.ageDays} 天，${ageBandLabel(check.ageBand)}，费率 ${fmtRate(check.agedByVolume, r.mp.currency)}/${r.billUnit}，单件费 ${fmtMoney(check.unitAgedFee, r.mp.currency)}`).join("<br>")
     : "测算区间内没有每月 15 日核查点";
 
   const rows = [
@@ -1787,7 +1803,7 @@ function renderResult() {
     ["体积精度口径", `体积先四舍五入保留 4 位；展示和费用计算使用同一个体积值`],
     ["逐月基础费明细", segmentBreakdown],
     ["单件基础仓储费", `${fmtMoney(r.unitBaseFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitBaseFee, r.mp.currency)}`],
-    ["单件仓储利用率附加费公式", `单件体积 × 各月天数/当月天数 × ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.unitUtilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitUtilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
+    ["单件仓储利用率附加费公式", `单件体积 × 各月天数/当月天数 × ${fmtRate(r.utilizationByVolume, r.mp.currency)}/${r.billUnit} = ${fmtMoney(r.unitUtilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitUtilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
     ["库龄费核查明细", agedCheckBreakdown],
     ["单件库龄附加费公式", `各核查日 max(单件体积 × 当日库龄档费率, 单件最低费) 后汇总 = ${fmtMoney(r.unitAgedFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitAgedFee, r.mp.currency)}`],
     ["预计单件仓储费", fmtMoney(r.costPerUnit, r.mp.currency)],
@@ -1824,7 +1840,7 @@ function renderRateTables() {
 function renderMonthlyTable() {
   const rows = MARKETPLACES.map(mp => {
     const r = RATES.monthly[mp.code];
-    const rateText = value => Number(value) > 0 ? fmtMoney(Number(value), mp.currency) : "待补";
+    const rateText = value => Number(value) > 0 ? fmtRate(Number(value), mp.currency) : "待补";
     return `<tr>
       <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
       ${["standard","oversize","hazmatStandard","hazmatOversize"].map(key =>
@@ -1845,7 +1861,7 @@ function renderSeasonTable() {
     const r = RATES.monthly[mp.code];
     const seasonInfo = SEASON_WINDOWS[mp.code] || SEASON_WINDOWS.DEFAULT;
     const requirement = categoryRequirement(mp.code);
-    const rateText = value => Number(value) > 0 ? fmtMoney(Number(value), mp.currency) : "待补";
+    const rateText = value => Number(value) > 0 ? fmtRate(Number(value), mp.currency) : "待补";
     const categoryRates = Object.entries(r.categoryOverrides || {}).map(([category, row]) =>
       `${STORAGE_CATEGORY_LABELS[category] || category}：标准 ${rateText(row.standard.offPeak)} / ${rateText(row.standard.peak)}，大件 ${rateText(row.oversize.offPeak)} / ${rateText(row.oversize.peak)}`
     ).join("<br>");
@@ -1874,7 +1890,7 @@ function renderAgedTable() {
     const isNotApplicable = String(r.status || "").startsWith("not_applicable");
     const isPending = String(r.status || "").startsWith("needs_official_check");
     const rateText = (value, band) => {
-      if (Number(value) > 0) return fmtMoney(Number(value), mp.currency);
+      if (Number(value) > 0) return fmtRate(Number(value), mp.currency);
       if (isNotApplicable) return "不适用";
       if (isPending) return "待核实";
       return "—";
@@ -1909,7 +1925,7 @@ function renderUtilizationTable() {
     const cells = genericTiers.map(([min, max]) => {
       const item = (row.thresholds || []).find(tier => tier.min === min && tier.max === max);
       return item
-        ? `<td>标准 ${fmtMoney(Number(item.standard || 0), mp.currency)}<br><span class="subtle">大件 ${fmtMoney(Number(item.oversize || 0), mp.currency)}</span></td>`
+        ? `<td>标准 ${fmtRate(Number(item.standard || 0), mp.currency)}<br><span class="subtle">大件 ${fmtRate(Number(item.oversize || 0), mp.currency)}</span></td>`
         : `<td>${emptyText}</td>`;
     }).join("");
     return `<tr><td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>${cells}<td class="subtle">${row.status}<br>${row.note}</td></tr>`;
@@ -1924,7 +1940,7 @@ function renderUtilizationTable() {
   ];
   const jpCells = jpTiers.map(([min, max]) => {
     const item = min === null ? { standard: 0, oversize: 0, jp_fashion: 0 } : jpRow.thresholds.find(tier => tier.min === min && tier.max === max);
-    return `<td>标准 ${fmtMoney(Number(item.standard || 0), jp.currency)}<br><span class="subtle">大件 ${fmtMoney(Number(item.oversize || 0), jp.currency)}<br>服装 ${fmtMoney(Number(item.jp_fashion || 0), jp.currency)}</span></td>`;
+    return `<td>标准 ${fmtRate(Number(item.standard || 0), jp.currency)}<br><span class="subtle">大件 ${fmtRate(Number(item.oversize || 0), jp.currency)}<br>服装 ${fmtRate(Number(item.jp_fashion || 0), jp.currency)}</span></td>`;
   }).join("");
   document.getElementById("utilizationTab").innerHTML = `
     <h3>通用站点</h3>
