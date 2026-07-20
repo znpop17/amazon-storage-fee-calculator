@@ -291,7 +291,7 @@
   <header>
     <div>
       <h1>亚马逊仓储费计算器</h1>
-      <p>按国家、SKU、商品体积、存放天数和库龄测算 FBA 单品仓储费。费率表与政策绑定，只读展示，适合做新品备货和滞销库存复盘。</p>
+      <p>按国家、SKU、商品体积、存放天数和库龄测算 FBA 单件仓储费。费率表与政策绑定，只读展示，适合做新品备货和滞销库存复盘。</p>
     </div>
     <span class="badge">支持 21 个 Marketplace 来源链接</span>
   </header>
@@ -305,7 +305,7 @@
       <div class="panel-body stack">
         <div class="grid">
           <label>SKU
-            <input id="sku" type="text" placeholder="可选">
+            <input id="sku" type="text" placeholder="必填" required>
           </label>
           <label>国家
             <select id="marketplace"></select>
@@ -314,7 +314,7 @@
 
         <div class="grid">
           <label>测算日期
-            <input id="calculationDate" type="date">
+            <input id="calculationDate" type="date" required>
           </label>
         </div>
 
@@ -324,12 +324,7 @@
             <input id="sizeType" type="hidden" value="standard">
           </label>
           <label>仓储类目
-            <select id="storageCategory">
-              <option value="default">普通类目</option>
-              <option value="us_aged_exempt">US/CA 服装/鞋包/珠宝/手表（181-270 天超龄费豁免）</option>
-              <option value="jp_fashion">JP 服装/时尚配件、鞋靴/箱包</option>
-              <option value="eu_fashion">UK/EU 服装、眼镜、鞋靴和箱包</option>
-            </select>
+            <select id="storageCategory"></select>
           </label>
         </div>
 
@@ -346,45 +341,36 @@
         </div>
 
         <div class="grid">
-          <label>费用口径
+          <label><span id="taxModeLabelText">费用口径（仅日本适用）</span>
             <select id="taxMode">
               <option value="taxIncluded" selected>含税</option>
               <option value="taxExcluded">不含税</option>
+              <option value="notApplicable">不适用：按官方费率原值计算</option>
             </select>
           </label>
           <label>商品重量 kg
-            <input id="weightKg" type="number" min="0" step="0.001" value="0.5">
-          </label>
-        </div>
-
-        <div class="grid">
-          <label>计费体积单位
-            <select id="billingUnit">
-              <option value="auto">跟随国家</option>
-              <option value="ft3">立方英尺 ft³</option>
-              <option value="m3">立方米 m³</option>
-            </select>
+            <input id="weightKg" type="number" min="0.001" step="0.001" value="0.5" required>
           </label>
         </div>
 
         <div class="grid-3">
           <label>长 cm
-            <input id="length" type="number" min="0" step="0.01" value="30">
+            <input id="length" type="number" min="0.01" step="0.01" value="30" required>
           </label>
           <label>宽 cm
-            <input id="width" type="number" min="0" step="0.01" value="20">
+            <input id="width" type="number" min="0.01" step="0.01" value="20" required>
           </label>
           <label>高 cm
-            <input id="height" type="number" min="0" step="0.01" value="5">
+            <input id="height" type="number" min="0.01" step="0.01" value="5" required>
           </label>
         </div>
 
         <div class="grid">
-          <label>单品数量
-            <input id="units" type="number" min="0" step="1" value="1">
+          <label>库存数量（件）
+            <input id="units" type="number" min="1" step="1" value="1" required>
           </label>
-          <label>单品存放/周转天数
-            <input id="storageDays" type="number" min="0" step="0.1" value="45">
+          <label>单件存放/周转天数
+            <input id="storageDays" type="number" min="1" step="1" value="45" required>
           </label>
         </div>
 
@@ -395,19 +381,8 @@
         </div>
 
         <div class="grid">
-          <label>库存库龄
-            <select id="ageBand">
-              <option value="0_90">0-90 天（含 90）</option>
-              <option value="91_180">91-180 天（含 180）</option>
-              <option value="181_210">181-210 天（含 210）</option>
-              <option value="211_240">211-240 天（含 240）</option>
-              <option value="241_270">241-270 天（含 270）</option>
-              <option value="271_300">271-300 天（含 300）</option>
-              <option value="301_330">301-330 天（含 330）</option>
-              <option value="331_365">331-365 天（含 365）</option>
-              <option value="366_455">366-455 天（含 455）</option>
-              <option value="456_plus">456 天以上（不含 455）</option>
-            </select>
+          <label>测算开始时库存库龄（天）
+            <input id="initialAgeDays" type="number" min="0" step="1" value="0" required>
           </label>
         </div>
 
@@ -419,7 +394,7 @@
 
         <div class="notice" id="dataNotice"></div>
         <div class="notice ok">
-          单品仓储费需要提供：SKU、国家、测算日期、费用口径、商品包装尺寸 cm、商品重量 kg、危险品、单品存放/周转天数；JP 和 UK/EU 部分国家还需要选择仓储类目。工具会按测算日期和周转天数逐月拆分，并自动套用各月淡旺季费率。体积统一四舍五入保留 4 位，金额按每月每项 4 位小数取值后汇总。
+          必填：SKU、国家、商品包装尺寸 cm、商品重量 kg、库存数量、单件存放/周转天数、测算开始时库存库龄。测算日期默认当天；危险品默认否；仓储利用率周数可选，未填写按 0 周；费用口径仅日本适用且默认含税。库龄附加费在区间内每月 15 日核查。体积先四舍五入保留 4 位小数，展示和费用计算使用同一个体积值。
         </div>
       </div>
     </section>
@@ -433,22 +408,22 @@
         <div class="panel-body stack">
           <div class="results">
             <div class="metric">
-              <span>周转期基础仓储费</span>
+              <span>单件基础仓储费</span>
               <strong id="baseFee">-</strong>
               <small id="baseRateText">-</small>
             </div>
             <div class="metric">
-              <span>仓储利用率附加费</span>
+              <span>单件仓储利用率附加费</span>
               <strong id="utilizationFee">-</strong>
               <small id="utilizationRateText">-</small>
             </div>
             <div class="metric">
-              <span>库龄附加费</span>
+              <span>单件库龄附加费</span>
               <strong id="agedFee">-</strong>
               <small id="agedRateText">-</small>
             </div>
             <div class="metric">
-              <span>预计单品仓储费</span>
+              <span>预计单件仓储费</span>
               <strong id="totalFee">-</strong>
               <small id="perUnitText">-</small>
             </div>
@@ -462,11 +437,11 @@
             </div>
             <div>
               <h3>批量 CSV</h3>
-              <p class="subtle">列名：sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band。calculation_date 填 YYYY-MM-DD，留空默认当天；tax_mode 填 taxIncluded 或 taxExcluded；仓储利用率周数没有后台数据时填 0。</p>
-              <textarea id="batchInput" spellcheck="false">sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
-SKU-001,美国,2026-09-20,default,no,taxIncluded,30,20,5,0.5,1,45,0,0_90
-SKU-002,日本,2026-09-20,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366_455
-SKU-003,德国,2026-09-20,eu_fashion,no,taxIncluded,30,20,5,0.5,1,45,0,0_90</textarea>
+              <p class="subtle">必填列：sku、country、length_cm、width_cm、height_cm、weight_kg、quantity、storage_days、initial_age_days。calculation_date 缺失时默认当天；hazmat 默认 no；tax_mode 仅日本适用并默认 taxIncluded；utilization_weeks 可选。旧周转天数字段仅兼容输入，输出统一使用 storage_days。</p>
+              <textarea id="batchInput" spellcheck="false">sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,initial_age_days
+SKU-001,美国,2026-09-20,default,no,,30,20,5,0.5,1,45,0,0
+SKU-002,日本,2026-09-20,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366
+SKU-003,德国,2026-09-20,eu_fashion,no,,30,20,5,0.5,1,45,0,0</textarea>
               <div class="actions" style="margin-top:10px;">
                 <input id="csvFileInput" type="file" accept=".csv,text/csv" class="hidden">
                 <button class="ghost" id="importCsvBtn">导入 CSV</button>
@@ -481,7 +456,7 @@ SKU-003,德国,2026-09-20,eu_fashion,no,taxIncluded,30,20,5,0.5,1,45,0,0_90</tex
             <table>
               <thead>
                 <tr>
-                  <th>SKU</th><th>国家</th><th>测算区间</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">总费用</th><th>说明</th>
+                  <th>SKU</th><th>国家</th><th>测算区间</th><th>类型</th><th class="num">数量</th><th class="num">单件体积</th><th class="num">单件费用</th><th class="num">总费用</th><th>说明</th>
                 </tr>
               </thead>
               <tbody id="batchTable"></tbody>
@@ -689,6 +664,21 @@ const STORAGE_CATEGORY_LABELS = {
   us_aged_exempt: "US/CA 服装/鞋包/珠宝/手表（181-270 天超龄费豁免）",
   jp_fashion: "JP 服装/时尚配件、鞋靴/箱包",
   eu_fashion: "UK/EU 服装、眼镜、鞋靴和箱包"
+};
+
+const STORAGE_CATEGORY_OPTIONS = {
+  US: ["default", "us_aged_exempt"],
+  CA: ["default", "us_aged_exempt"],
+  JP: ["default", "jp_fashion"],
+  UK: ["default", "eu_fashion"],
+  DE: ["default", "eu_fashion"],
+  FR: ["default", "eu_fashion"],
+  IT: ["default", "eu_fashion"],
+  ES: ["default", "eu_fashion"],
+  NL: ["default", "eu_fashion"],
+  SE: ["default", "eu_fashion"],
+  PL: ["default", "eu_fashion"],
+  BE: ["default", "eu_fashion"]
 };
 
 const ADDITIONAL_FEE_SOURCES = {
@@ -899,6 +889,7 @@ function makeDefaults() {
     };
     rates.aged[mp.code] = {
       status: mp.code === "US" ? "official_sellercentral_2026_01_16" : "needs_official_check",
+      bandKeys: ["0_90", "91_180", "181_210", "211_240", "241_270", "271_300", "301_330", "331_365", "366_455", "456_plus"],
       byVolume: {
         none: 0,
         "0_90": 0,
@@ -996,6 +987,7 @@ function makeDefaults() {
     if (mp.code === "MX") {
       rates.aged[mp.code] = {
         status: "official_pricing_page_dm3_converted",
+        bandKeys: ["0_90", "91_180", "181_210", "211_240", "241_270", "271_300", "301_330", "331_365", "366_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1006,16 +998,16 @@ function makeDefaults() {
           "271_300": 2560,
           "301_330": 2730,
           "331_365": 2820,
-          "366_455": 4760,
-          "456_plus": 4760
+          "366_plus": 4760
         },
         perUnitMinimum365: 0,
-        perUnitMinimumByBand: { "366_455": 2.32, "456_plus": 2.32 }
+        perUnitMinimumByBand: { "366_plus": 2.32 }
       };
     }
     if (mp.code === "AU") {
       rates.aged[mp.code] = {
         status: "official_pricing_page",
+        bandKeys: ["0_270", "271_300", "301_330", "331_365", "366_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1026,16 +1018,16 @@ function makeDefaults() {
           "271_300": 155,
           "301_330": 175,
           "331_365": 185,
-          "366_455": 370,
-          "456_plus": 370
+          "366_plus": 370
         },
         perUnitMinimum365: 0,
-        perUnitMinimumByBand: { "366_455": 0.12, "456_plus": 0.12 }
+        perUnitMinimumByBand: { "366_plus": 0.12 }
       };
     }
     if (mp.code === "CA") {
       rates.aged[mp.code] = {
         status: "official_sellercentral_2025_05_15",
+        bandKeys: ["0_90", "91_180", "181_210", "211_240", "241_270", "271_300", "301_330", "331_365", "366_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1046,16 +1038,16 @@ function makeDefaults() {
           "271_300": 156,
           "301_330": 172,
           "331_365": 189,
-          "366_455": 330,
-          "456_plus": 330
+          "366_plus": 330
         },
         perUnitMinimum365: 0,
-        perUnitMinimumByBand: { "366_455": 0.15, "456_plus": 0.15 }
+        perUnitMinimumByBand: { "366_plus": 0.15 }
       };
     }
     if (["AE", "SA"].includes(mp.code)) {
       rates.aged[mp.code] = {
         status: "official_sellercentral_2026_01_15",
+        bandKeys: ["0_270", "271_365", "366_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1063,11 +1055,8 @@ function makeDefaults() {
           "181_210": 0,
           "211_240": 0,
           "241_270": 0,
-          "271_300": 8,
-          "301_330": 8,
-          "331_365": 8,
-          "366_455": 30,
-          "456_plus": 30
+          "271_365": 8,
+          "366_plus": 30
         },
         perUnitMinimum365: 0,
         perUnitMinimumByBand: {}
@@ -1077,6 +1066,7 @@ function makeDefaults() {
       const isUk = mp.code === "UK";
       rates.aged[mp.code] = {
         status: "official_eu_rate_card_2026_04_17",
+        bandKeys: ["0_240", "241_270", "271_300", "301_330", "331_365", "366_455", "456_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1098,6 +1088,7 @@ function makeDefaults() {
       rates.aged[mp.code] = {
         status: "not_applicable_eu_2026_rate_card",
         note: "2026-04-17 欧洲官方费率卡的超龄库存附加费未列本国家。",
+        bandKeys: ["not_applicable"],
         byVolume: Object.fromEntries(["none", "0_90", "91_180", "181_210", "211_240", "241_270", "271_300", "301_330", "331_365", "366_455", "456_plus"].map(key => [key, 0])),
         perUnitMinimum365: 0,
         perUnitMinimumByBand: {}
@@ -1107,6 +1098,7 @@ function makeDefaults() {
       rates.aged[mp.code] = {
         status: "official_public_pricing_365_plus",
         note: "Amazon Egypt 官方公开页面列明：超过 365 天按 EGP 40 / ft3 收取长期仓储费。",
+        bandKeys: ["0_365", "366_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1117,8 +1109,7 @@ function makeDefaults() {
           "271_300": 0,
           "301_330": 0,
           "331_365": 0,
-          "366_455": 40,
-          "456_plus": 40
+          "366_plus": 40
         },
         perUnitMinimum365: 0,
         perUnitMinimumByBand: {}
@@ -1128,6 +1119,7 @@ function makeDefaults() {
       rates.aged[mp.code] = {
         status: "official_sellercentral_2026_04_15",
         note: "Official Japan aged-inventory surcharge effective 2026-04-15; rates are stored as tax-included JPY per m3. Inventory over 365 days uses the greater of the volume fee and JPY 20 per unit.",
+        bandKeys: ["0_270", "271_300", "301_330", "331_365", "366_plus"],
         byVolume: {
           none: 0,
           "0_90": 0,
@@ -1138,11 +1130,10 @@ function makeDefaults() {
           "271_300": 16662,
           "301_330": 17475,
           "331_365": 18085,
-          "366_455": 34239,
-          "456_plus": 34239
+          "366_plus": 34239
         },
         perUnitMinimum365: 0,
-        perUnitMinimumByBand: { "366_455": 20, "456_plus": 20 }
+        perUnitMinimumByBand: { "366_plus": 20 }
       };
     }
   });
@@ -1156,15 +1147,15 @@ const MONEY_DECIMALS = 4;
 const VOLUME_DECIMALS = 4;
 
 const els = Object.fromEntries([
-  "sku","marketplace","calculationDate","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","taxMode","billingUnit","length","width","height","weightKg",
-  "storageDays","utilizationWeeks","units",
-  "ageBand","sourceBadge","dataNotice","baseFee","utilizationFee","agedFee","totalFee","baseRateText",
+  "sku","marketplace","calculationDate","sizeType","sizeTypeLabel","storageCategory","categoryNotice","hazmat","taxMode","taxModeLabelText","length","width","height","weightKg",
+  "storageDays","utilizationWeeks","units","initialAgeDays",
+  "sourceBadge","dataNotice","baseFee","utilizationFee","agedFee","totalFee","baseRateText",
   "utilizationRateText","agedRateText","perUnitText","formulaText","detailTable","batchInput","batchWrap","batchTable"
 ].map(id => [id, document.getElementById(id)]));
 
-const BATCH_TEMPLATE = `sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,age_band
-SKU-001,美国,2026-09-20,default,no,taxIncluded,30,20,5,0.5,1,45,0,0_90
-SKU-002,日本,2026-09-20,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366_455`;
+const BATCH_TEMPLATE = `sku,country,calculation_date,storage_category,hazmat,tax_mode,length_cm,width_cm,height_cm,weight_kg,quantity,storage_days,utilization_weeks,initial_age_days
+SKU-001,美国,2026-09-20,default,no,,30,20,5,0.5,1,45,0,0
+SKU-002,日本,2026-09-20,jp_fashion,no,taxIncluded,30,20,5,0.5,1,45,26,366`;
 
 function loadRates() {
   // Fee rates are policy-bound and intentionally ignore old browser-local edits.
@@ -1222,13 +1213,16 @@ function fmtVolume(value) {
 }
 
 function normalizeCountryCode(value) {
-  const raw = String(value || "US").trim();
+  const raw = String(value || "").trim();
+  if (!raw) throw new Error("国家为必填项。");
   return COUNTRY_ALIASES[raw.toLowerCase()] || raw.toUpperCase();
 }
 
 function getMarket(code = els.marketplace.value) {
   const normalized = normalizeCountryCode(code);
-  return MARKETPLACES.find(mp => mp.code === normalized) || MARKETPLACES[0];
+  const market = MARKETPLACES.find(mp => mp.code === normalized);
+  if (!market) throw new Error(`无法识别国家“${code}”，请使用页面国家名称或 Marketplace 代码。`);
+  return market;
 }
 
 function normalizeSeason(value) {
@@ -1248,12 +1242,14 @@ function todayDateValue() {
 
 function normalizeCalculationDate(value) {
   const raw = String(value || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return todayDateValue();
+  if (!raw) return todayDateValue();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("测算日期格式必须为 YYYY-MM-DD。");
   const [year, month, day] = raw.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-    ? raw
-    : todayDateValue();
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error("测算日期不是有效的自然日。");
+  }
+  return raw;
 }
 
 function utcDateFromValue(value) {
@@ -1312,6 +1308,18 @@ function normalizeStorageCategory(mpCode, value) {
   return "default";
 }
 
+function parseStorageCategory(mpCode, value) {
+  const raw = String(value || "default").trim();
+  const normalized = normalizeStorageCategory(mpCode, raw);
+  const knownDefaultAliases = ["default", "普通类目", "普通", "general"];
+  const rawIsKnown = normalized !== "default" || knownDefaultAliases.includes(raw.toLowerCase()) || knownDefaultAliases.includes(raw);
+  const allowed = STORAGE_CATEGORY_OPTIONS[mpCode] || ["default"];
+  if (!rawIsKnown || !allowed.includes(normalized)) {
+    throw new Error(`${countryLabel(mpCode)}不支持仓储类目“${raw}”。`);
+  }
+  return normalized;
+}
+
 function storageCategoryLabel(mpCode, value) {
   return STORAGE_CATEGORY_LABELS[normalizeStorageCategory(mpCode, value)] || STORAGE_CATEGORY_LABELS.default;
 }
@@ -1319,6 +1327,25 @@ function storageCategoryLabel(mpCode, value) {
 function categoryRequirement(mpCode) {
   return STORAGE_CATEGORY_REQUIREMENTS[mpCode] || { required: false, note: "当前国家无需提供仓储类目。" };
 }
+
+const AGE_BAND_DEFINITIONS = {
+  "not_applicable": { min: 0, max: Infinity, label: "不适用" },
+  "0_90": { min: 0, max: 90, label: "0-90 天（含 90）" },
+  "0_240": { min: 0, max: 240, label: "0-240 天（含 240）" },
+  "0_270": { min: 0, max: 270, label: "0-270 天（含 270）" },
+  "0_365": { min: 0, max: 365, label: "0-365 天（含 365）" },
+  "91_180": { min: 91, max: 180, label: "91-180 天（含 180）" },
+  "181_210": { min: 181, max: 210, label: "181-210 天（含 210）" },
+  "211_240": { min: 211, max: 240, label: "211-240 天（含 240）" },
+  "241_270": { min: 241, max: 270, label: "241-270 天（含 270）" },
+  "271_300": { min: 271, max: 300, label: "271-300 天（含 300）" },
+  "271_365": { min: 271, max: 365, label: "271-365 天（含 365）" },
+  "301_330": { min: 301, max: 330, label: "301-330 天（含 330）" },
+  "331_365": { min: 331, max: 365, label: "331-365 天（含 365）" },
+  "366_plus": { min: 366, max: Infinity, label: "366 天及以上" },
+  "366_455": { min: 366, max: 455, label: "366-455 天（含 455）" },
+  "456_plus": { min: 456, max: Infinity, label: "456 天及以上" }
+};
 
 function ageBandLabel(value) {
   const labels = {
@@ -1330,19 +1357,73 @@ function ageBandLabel(value) {
     "271_300": "271-300 天（含 300）",
     "301_330": "301-330 天（含 330）",
     "331_365": "331-365 天（含 365）",
+    "366_plus": "366 天及以上",
     "366_455": "366-455 天（含 455）",
-    "456_plus": "456 天以上（不含 455）"
+    "456_plus": "456 天及以上"
   };
-  return labels[normalizeAgeBand(value)] || labels["0_90"];
+  return AGE_BAND_DEFINITIONS[normalizeAgeBand(value)]?.label || labels[normalizeAgeBand(value)] || labels["0_90"];
 }
 
-function billingUnitFor(mp, selected = els.billingUnit.value) {
-  return selected === "auto" ? mp.unit : selected;
+function normalizeInitialAgeDays(value) {
+  const days = Number(value);
+  if (!Number.isInteger(days) || days < 0) throw new Error("测算开始时库存库龄必须是大于等于 0 的整数天。");
+  return days;
+}
+
+function ageBandForDays(mpCode, value) {
+  const days = normalizeInitialAgeDays(value);
+  const bandKeys = RATES.aged[mpCode]?.bandKeys || RATES.aged.US.bandKeys;
+  return bandKeys.find(key => {
+    const band = AGE_BAND_DEFINITIONS[key];
+    return band && days >= band.min && days <= band.max;
+  }) || "not_applicable";
+}
+
+function daysBetweenUtc(start, end) {
+  return Math.round((end.getTime() - start.getTime()) / 86400000);
+}
+
+function buildAgedInventoryChecks(mpCode, calculationDate, storageDays, initialAgeDays) {
+  const totalDays = Math.max(0, Math.ceil(Number(storageDays) || 0));
+  if (totalDays <= 0) return [];
+  const start = utcDateFromValue(calculationDate);
+  const checks = [];
+  for (let monthOffset = 0; monthOffset < 1200; monthOffset++) {
+    const year = start.getUTCFullYear();
+    const monthIndex = start.getUTCMonth() + monthOffset;
+    const checkDate = new Date(Date.UTC(year, monthIndex, 15));
+    const elapsedDays = daysBetweenUtc(start, checkDate);
+    if (elapsedDays < 0) continue;
+    if (elapsedDays >= totalDays) break;
+    const ageDays = normalizeInitialAgeDays(initialAgeDays) + elapsedDays;
+    checks.push({
+      checkDate: formatUtcDate(checkDate),
+      elapsedDays,
+      ageDays,
+      ageBand: ageBandForDays(mpCode, ageDays)
+    });
+  }
+  return checks;
+}
+
+function parseInitialAgeDays(row, rowNumber) {
+  const raw = row.initial_age_days ?? row.inventory_age_days;
+  if ((raw === undefined || String(raw).trim() === "") && row.age_band) {
+    throw new Error(`第 ${rowNumber} 行仍使用旧字段 age_band；请改为 initial_age_days 并填写测算开始日当天准确库龄。`);
+  }
+  if (raw === undefined || String(raw).trim() === "") {
+    throw new Error(`第 ${rowNumber} 行缺少 initial_age_days。`);
+  }
+  const days = Number(raw);
+  if (!Number.isInteger(days) || days < 0) {
+    throw new Error(`第 ${rowNumber} 行 initial_age_days 必须是大于等于 0 的整数。`);
+  }
+  return days;
 }
 
 function volumeFromDims(length, width, height, dimUnit, billUnit) {
   const l = Number(length), w = Number(width), h = Number(height);
-  if (![l, w, h].every(v => Number.isFinite(v) && v >= 0)) return 0;
+  if (![l, w, h].every(v => Number.isFinite(v) && v > 0)) throw new Error("长、宽、高必须全部大于 0 cm。");
   const m3 = (l * w * h) / 1000000;
   return billUnit === "ft3" ? m3 * 35.3146667215 : m3;
 }
@@ -1408,20 +1489,80 @@ function agedRate(mpCode, ageBand) {
 
 function normalizeAgeBand(value) {
   if (!value || value === "none") return "0_90";
-  if (value === "365_plus") return "366_455";
+  if (value === "365_plus") return "366_plus";
   return value;
 }
 
-function normalizeTaxMode(value) {
-  return value === "taxExcluded" ? "taxExcluded" : "taxIncluded";
+function normalizeHazmat(value) {
+  const raw = String(value ?? "no").trim().toLowerCase();
+  if (["yes", "是", "true", "1"].includes(raw)) return "yes";
+  if (["no", "否", "false", "0", ""].includes(raw)) return "no";
+  throw new Error(`危险品字段“${value}”无效，请填写 yes/no、是/否、true/false 或 1/0。`);
 }
 
-function taxModeLabel(value) {
-  return normalizeTaxMode(value) === "taxIncluded" ? "含税" : "不含税";
+function normalizeTaxMode(value, mpCode = "JP") {
+  if (mpCode !== "JP") return "notApplicable";
+  const raw = String(value ?? "taxIncluded").trim().toLowerCase();
+  if (["taxincluded", "含税", ""].includes(raw)) return "taxIncluded";
+  if (["taxexcluded", "不含税"].includes(raw)) return "taxExcluded";
+  throw new Error(`费用口径“${value}”无效，日本站请填写 taxIncluded/含税 或 taxExcluded/不含税。`);
+}
+
+function taxModeLabel(value, mpCode = "JP") {
+  if (mpCode !== "JP" || value === "notApplicable") return "不适用：按官方费率原值计算";
+  return normalizeTaxMode(value, mpCode) === "taxIncluded" ? "含税" : "不含税";
 }
 
 function storageTaxRate(mpCode) {
   return mpCode === "JP" ? 0.1 : 0;
+}
+
+function requiredNumber(value, label) {
+  if (value === undefined || value === null || String(value).trim() === "") throw new Error(`${label}为必填项。`);
+  const number = Number(value);
+  if (!Number.isFinite(number)) throw new Error(`${label}必须是有效数字。`);
+  return number;
+}
+
+function validateCalculationInput(rawInput) {
+  const mp = getMarket(rawInput.marketplace);
+  const sku = String(rawInput.sku || "").trim();
+  if (!sku) throw new Error("SKU为必填项。");
+  const length = requiredNumber(rawInput.length, "长");
+  const width = requiredNumber(rawInput.width, "宽");
+  const height = requiredNumber(rawInput.height, "高");
+  if ([length, width, height].some(value => value <= 0)) throw new Error("长、宽、高必须全部大于 0 cm。");
+  const weightKg = requiredNumber(rawInput.weightKg, "商品重量");
+  if (weightKg <= 0) throw new Error("商品重量必须大于 0 kg。");
+  const units = requiredNumber(rawInput.units, "库存数量");
+  if (!Number.isInteger(units) || units < 1) throw new Error("库存数量必须是大于等于 1 的整数。");
+  const storageDays = requiredNumber(rawInput.storageDays, "单件存放/周转天数");
+  if (!Number.isInteger(storageDays) || storageDays < 1) throw new Error("单件存放/周转天数必须是大于等于 1 的整数天。");
+  if (rawInput.initialAgeDays === undefined || rawInput.initialAgeDays === null || String(rawInput.initialAgeDays).trim() === "") {
+    throw new Error("测算开始时库存库龄为必填项。");
+  }
+  const initialAgeDays = normalizeInitialAgeDays(rawInput.initialAgeDays);
+  const utilizationWeeks = rawInput.utilizationWeeks === undefined || rawInput.utilizationWeeks === null || String(rawInput.utilizationWeeks).trim() === ""
+    ? 0
+    : Number(rawInput.utilizationWeeks);
+  if (!Number.isFinite(utilizationWeeks) || utilizationWeeks < 0) throw new Error("仓储利用率周数必须是大于等于 0 的数字。");
+  return {
+    ...rawInput,
+    sku,
+    marketplace: mp.code,
+    calculationDate: normalizeCalculationDate(rawInput.calculationDate),
+    storageCategory: parseStorageCategory(mp.code, rawInput.storageCategory),
+    hazmat: normalizeHazmat(rawInput.hazmat),
+    taxMode: normalizeTaxMode(rawInput.taxMode, mp.code),
+    length,
+    width,
+    height,
+    weightKg,
+    units,
+    storageDays,
+    utilizationWeeks,
+    initialAgeDays
+  };
 }
 
 function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
@@ -1441,78 +1582,103 @@ function utilizationRate(mpCode, weeks, sizeType, storageCategory) {
 }
 
 function calculate(input) {
+  input = validateCalculationInput(input);
   const mp = getMarket(input.marketplace);
-  const storageCategory = normalizeStorageCategory(mp.code, input.storageCategory);
-  const taxMode = normalizeTaxMode(input.taxMode);
+  const storageCategory = input.storageCategory;
+  const taxMode = input.taxMode;
   const taxRate = storageTaxRate(mp.code);
   const taxMultiplier = 1 + taxRate;
   const includeTax = taxMode === "taxIncluded";
-  const billUnit = input.billingUnit === "auto" ? mp.unit : input.billingUnit;
+  const billUnit = mp.unit;
   const sizeDecision = classifySizeType(mp.code, input.length, input.width, input.height, input.weightKg);
   const unitVolume = roundVolume(volumeFromDims(input.length, input.width, input.height, "cm", billUnit));
-  const units = Number(input.units) || 0;
+  const units = input.units;
   const totalInventoryVolume = roundVolume(unitVolume * units);
   const period = splitStoragePeriod(mp.code, input.calculationDate, input.storageDays);
-  const ageBand = normalizeAgeBand(input.ageBand);
-  const agedByVolume = agedRate(mp.code, ageBand);
+  const initialAgeDays = input.initialAgeDays;
+  const endingAgeDays = initialAgeDays + Math.max(0, Math.ceil(period.totalDays) - 1);
   const utilizationByVolume = utilizationRate(mp.code, input.utilizationWeeks, sizeDecision.type, storageCategory);
-  const minPerUnit = Number(RATES.aged[mp.code]?.perUnitMinimumByBand?.[ageBand] ?? RATES.aged[mp.code]?.perUnitMinimum365 ?? 0);
-  const usCaAgedExempt = ["US", "CA"].includes(mp.code)
-    && storageCategory === "us_aged_exempt"
-    && ["181_210", "211_240", "241_270"].includes(ageBand);
-  const euAgedExempt = ["UK", "DE", "FR", "IT", "ES"].includes(mp.code)
-    && storageCategory === "eu_fashion"
-    && ageBand === "241_270";
-  const effectiveAgedByVolume = usCaAgedExempt || euAgedExempt ? 0 : agedByVolume;
+  const agedChecks = buildAgedInventoryChecks(mp.code, period.startDate, period.totalDays, initialAgeDays).map(check => {
+    const agedByVolume = agedRate(mp.code, check.ageBand);
+    const minPerUnit = Number(RATES.aged[mp.code]?.perUnitMinimumByBand?.[check.ageBand] ?? RATES.aged[mp.code]?.perUnitMinimum365 ?? 0);
+    const usCaAgedExempt = ["US", "CA"].includes(mp.code)
+      && storageCategory === "us_aged_exempt"
+      && ["181_210", "211_240", "241_270"].includes(check.ageBand);
+    const euAgedExempt = ["UK", "DE", "FR", "IT", "ES"].includes(mp.code)
+      && storageCategory === "eu_fashion"
+      && check.ageBand === "241_270";
+    const effectiveAgedByVolume = usCaAgedExempt || euAgedExempt ? 0 : agedByVolume;
+    const officialUnitAgedMinimum = roundMoney(minPerUnit);
+    const officialUnitAgedFee = roundMoney(Math.max(unitVolume * effectiveAgedByVolume, officialUnitAgedMinimum));
+    const unitAgedMinimumExTax = roundMoney(officialUnitAgedMinimum / taxMultiplier);
+    const unitAgedFeeExTax = roundMoney(officialUnitAgedFee / taxMultiplier);
+    return {
+      ...check,
+      agedByVolume: includeTax ? effectiveAgedByVolume : effectiveAgedByVolume / taxMultiplier,
+      minPerUnit: includeTax ? officialUnitAgedMinimum : unitAgedMinimumExTax,
+      unitAgedMinimumExTax,
+      unitAgedFeeExTax,
+      unitAgedFee: includeTax ? officialUnitAgedFee : unitAgedFeeExTax
+    };
+  });
   const segments = period.segments.map(segment => {
     const officialBaseRate = monthlyRate(mp.code, segment.seasonBand, sizeDecision.type, input.hazmat, storageCategory);
     const baseRateExTax = officialBaseRate / taxMultiplier;
     const baseRate = includeTax ? officialBaseRate : baseRateExTax;
-    const volumeMonths = totalInventoryVolume * segment.monthRatio;
-    const officialBaseFee = roundMoney(volumeMonths * officialBaseRate);
-    const officialUtilizationFee = roundMoney(volumeMonths * utilizationByVolume);
-    const officialAgedMinimum = roundMoney(minPerUnit ? minPerUnit * units * segment.monthRatio : 0);
-    const officialAgedFee = roundMoney(Math.max(volumeMonths * effectiveAgedByVolume, officialAgedMinimum));
-    const baseFeeExTax = roundMoney(officialBaseFee / taxMultiplier);
-    const utilizationFeeExTax = roundMoney(officialUtilizationFee / taxMultiplier);
-    const agedMinimumExTax = roundMoney(officialAgedMinimum / taxMultiplier);
-    const agedFeeExTax = roundMoney(officialAgedFee / taxMultiplier);
+    const unitVolumeMonths = unitVolume * segment.monthRatio;
+    const officialUnitBaseFee = roundMoney(unitVolumeMonths * officialBaseRate);
+    const officialUnitUtilizationFee = roundMoney(unitVolumeMonths * utilizationByVolume);
+    const unitBaseFeeExTax = roundMoney(officialUnitBaseFee / taxMultiplier);
+    const unitUtilizationFeeExTax = roundMoney(officialUnitUtilizationFee / taxMultiplier);
+    const unitBaseFee = includeTax ? officialUnitBaseFee : unitBaseFeeExTax;
+    const unitUtilizationFee = includeTax ? officialUnitUtilizationFee : unitUtilizationFeeExTax;
     return {
-      ...segment, officialBaseRate, baseRateExTax, baseRate, volumeMonths,
-      baseFeeExTax, utilizationFeeExTax, agedMinimumExTax, agedFeeExTax,
-      baseFee: includeTax ? officialBaseFee : baseFeeExTax,
-      utilizationFee: includeTax ? officialUtilizationFee : utilizationFeeExTax,
-      agedFee: includeTax ? officialAgedFee : agedFeeExTax
+      ...segment, officialBaseRate, baseRateExTax, baseRate, unitVolumeMonths,
+      unitBaseFeeExTax, unitUtilizationFeeExTax,
+      unitBaseFee, unitUtilizationFee,
+      baseFeeExTax: roundMoney(unitBaseFeeExTax * units),
+      utilizationFeeExTax: roundMoney(unitUtilizationFeeExTax * units),
+      baseFee: roundMoney(unitBaseFee * units),
+      utilizationFee: roundMoney(unitUtilizationFee * units)
     };
   });
   const sumRaw = key => segments.reduce((total, segment) => total + Number(segment[key] || 0), 0);
   const sumMoney = key => roundMoney(sumRaw(key));
   const monthRatio = sumRaw("monthRatio");
-  const billableUnits = units * monthRatio;
-  const totalVolume = roundVolume(sumRaw("volumeMonths"));
   const fallbackOfficialBaseRate = monthlyRate(mp.code, seasonForMonth(mp.code, utcDateFromValue(period.startDate).getUTCMonth() + 1), sizeDecision.type, input.hazmat, storageCategory);
   const baseRate = segments[0]?.baseRate || (includeTax ? fallbackOfficialBaseRate : fallbackOfficialBaseRate / taxMultiplier);
-  const min365ExTax = sumMoney("agedMinimumExTax");
-  const min365 = includeTax ? roundMoney(min365ExTax * taxMultiplier) : min365ExTax;
-  const baseFeeExTax = sumMoney("baseFeeExTax");
-  const utilizationFeeExTax = sumMoney("utilizationFeeExTax");
-  const agedFeeExTax = sumMoney("agedFeeExTax");
-  const subtotalExTax = roundMoney(baseFeeExTax + utilizationFeeExTax + agedFeeExTax);
-  const baseFee = sumMoney("baseFee");
-  const utilizationFee = sumMoney("utilizationFee");
-  const agedFee = sumMoney("agedFee");
-  const totalFee = roundMoney(baseFee + utilizationFee + agedFee);
+  const sumAgedChecks = key => roundMoney(agedChecks.reduce((total, check) => total + Number(check[key] || 0), 0));
+  const unitMin365ExTax = sumAgedChecks("unitAgedMinimumExTax");
+  const min365 = includeTax ? roundMoney(unitMin365ExTax * taxMultiplier) : unitMin365ExTax;
+  const unitBaseFeeExTax = sumMoney("unitBaseFeeExTax");
+  const unitUtilizationFeeExTax = sumMoney("unitUtilizationFeeExTax");
+  const unitAgedFeeExTax = sumAgedChecks("unitAgedFeeExTax");
+  const unitSubtotalExTax = roundMoney(unitBaseFeeExTax + unitUtilizationFeeExTax + unitAgedFeeExTax);
+  const unitBaseFee = sumMoney("unitBaseFee");
+  const unitUtilizationFee = sumMoney("unitUtilizationFee");
+  const unitAgedFee = sumAgedChecks("unitAgedFee");
+  const costPerUnit = roundMoney(unitBaseFee + unitUtilizationFee + unitAgedFee);
+  const baseFeeExTax = roundMoney(unitBaseFeeExTax * units);
+  const utilizationFeeExTax = roundMoney(unitUtilizationFeeExTax * units);
+  const agedFeeExTax = roundMoney(unitAgedFeeExTax * units);
+  const subtotalExTax = roundMoney(unitSubtotalExTax * units);
+  const baseFee = roundMoney(unitBaseFee * units);
+  const utilizationFee = roundMoney(unitUtilizationFee * units);
+  const agedFee = roundMoney(unitAgedFee * units);
+  const totalFee = roundMoney(costPerUnit * units);
   const taxAmount = includeTax ? roundMoney(totalFee - subtotalExTax) : 0;
   return {
-    mp, billUnit, unitVolume, totalInventoryVolume, totalVolume, units, dayRatio: monthRatio, billableUnits, sizeDecision,
-    calculationDate: period.startDate, calculationEndDate: period.endDate, segments,
+    mp, billUnit, unitVolume, totalInventoryVolume, units, dayRatio: monthRatio, sizeDecision,
+    calculationDate: period.startDate, calculationEndDate: period.endDate, segments, agedChecks,
     baseRate,
     utilizationByVolume: includeTax ? utilizationByVolume : utilizationByVolume / taxMultiplier,
-    agedByVolume: includeTax ? effectiveAgedByVolume : effectiveAgedByVolume / taxMultiplier,
-    min365, ageBand, storageCategory,
+    min365, initialAgeDays, endingAgeDays,
+    ageBand: ageBandForDays(mp.code, initialAgeDays), endingAgeBand: ageBandForDays(mp.code, endingAgeDays), storageCategory,
+    unitBaseFeeExTax, unitUtilizationFeeExTax, unitAgedFeeExTax, unitSubtotalExTax,
+    unitBaseFee, unitUtilizationFee, unitAgedFee,
     baseFeeExTax, utilizationFeeExTax, agedFeeExTax, subtotalExTax,
     baseFee, utilizationFee, agedFee, totalFee, taxMode, taxRate, taxAmount,
-    costPerUnit: units ? roundMoney(totalFee / units) : 0,
+    costPerUnit,
     sku: input.sku || "",
     input
   };
@@ -1526,7 +1692,6 @@ function currentInput() {
     storageCategory: els.storageCategory.value,
     hazmat: els.hazmat.value,
     taxMode: els.taxMode.value,
-    billingUnit: els.billingUnit.value,
     length: Number(els.length.value),
     width: Number(els.width.value),
     height: Number(els.height.value),
@@ -1534,22 +1699,47 @@ function currentInput() {
     storageDays: Number(els.storageDays.value),
     utilizationWeeks: Number(els.utilizationWeeks.value),
     units: Number(els.units.value),
-    ageBand: normalizeAgeBand(els.ageBand.value)
+    initialAgeDays: els.initialAgeDays.value
   };
 }
 
+function syncConditionalFields() {
+  const mp = getMarket(els.marketplace.value);
+  const allowedCategories = STORAGE_CATEGORY_OPTIONS[mp.code] || ["default"];
+  const currentCategory = allowedCategories.includes(els.storageCategory.value) ? els.storageCategory.value : "default";
+  els.storageCategory.innerHTML = allowedCategories
+    .map(value => `<option value="${value}">${STORAGE_CATEGORY_LABELS[value]}</option>`)
+    .join("");
+  els.storageCategory.value = currentCategory;
+  const requirement = categoryRequirement(mp.code);
+  els.storageCategory.disabled = !requirement.required;
+  els.categoryNotice.value = requirement.required ? requirement.note : "当前国家无需提供仓储类目";
+  const isJapan = mp.code === "JP";
+  els.taxMode.disabled = !isJapan;
+  els.taxModeLabelText.textContent = isJapan ? "费用口径（仅日本适用）" : "费用口径（当前国家不适用）";
+  if (!isJapan) els.taxMode.value = "notApplicable";
+  if (isJapan && els.taxMode.value === "notApplicable") els.taxMode.value = "taxIncluded";
+}
+
 function renderResult() {
-  lastResult = calculate(currentInput());
+  try {
+    syncConditionalFields();
+    lastResult = calculate(currentInput());
+  } catch (error) {
+    lastResult = null;
+    els.dataNotice.className = "notice";
+    els.dataNotice.textContent = `请检查输入：${error.message}`;
+    [els.baseFee, els.utilizationFee, els.agedFee, els.totalFee].forEach(element => { element.textContent = "-"; });
+    [els.baseRateText, els.utilizationRateText, els.agedRateText, els.perUnitText].forEach(element => { element.textContent = "-"; });
+    els.formulaText.textContent = "输入有效后显示计算结果";
+    els.detailTable.innerHTML = "";
+    return;
+  }
   const r = lastResult;
   els.sizeType.value = r.sizeDecision.type;
   els.sizeTypeLabel.value = `${r.sizeDecision.label}（${r.sizeDecision.detailLabel}）`;
   els.sourceBadge.textContent = `${countryLabel(r.mp.code)} / ${r.mp.currency}`;
   const requirement = categoryRequirement(r.mp.code);
-  els.categoryNotice.value = requirement.required ? requirement.note : "当前国家无需提供仓储类目";
-  els.storageCategory.disabled = !requirement.required;
-  if (!requirement.required && els.storageCategory.value !== "default") {
-    els.storageCategory.value = "default";
-  }
   const status = RATES.monthly[r.mp.code]?.status;
   const hasPresetRate = status && status !== "needs_official_check" && r.baseRate > 0;
   els.dataNotice.className = hasPresetRate ? "notice ok" : "notice";
@@ -1557,41 +1747,51 @@ function renderResult() {
     ? `当前国家已预置月仓储费率。状态：${status}。类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}。来源：${r.mp.pageType}，${monthlyRateNote(r.mp.code, r.storageCategory, r.input.hazmat)}`
     : `当前国家只登记了官方链接，默认费率为 0；请在“费率表”补入官方数值后计算。来源：${r.mp.url}`;
 
-  els.baseFee.textContent = fmtMoney(r.baseFee, r.mp.currency);
-  els.utilizationFee.textContent = fmtMoney(r.utilizationFee, r.mp.currency);
-  els.agedFee.textContent = fmtMoney(r.agedFee, r.mp.currency);
-  els.totalFee.textContent = fmtMoney(r.totalFee, r.mp.currency);
+  els.baseFee.textContent = fmtMoney(r.unitBaseFee, r.mp.currency);
+  els.utilizationFee.textContent = fmtMoney(r.unitUtilizationFee, r.mp.currency);
+  els.agedFee.textContent = fmtMoney(r.unitAgedFee, r.mp.currency);
+  els.totalFee.textContent = fmtMoney(r.costPerUnit, r.mp.currency);
   const seasonSummary = [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join(" + ") || seasonLabel(seasonForMonth(r.mp.code, utcDateFromValue(r.calculationDate).getUTCMonth() + 1));
   const rateSummary = [...new Map(r.segments.map(segment => [segment.seasonBand, `${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}`])).values()].join("；") || fmtMoney(r.baseRate, r.mp.currency);
   els.baseRateText.textContent = `${rateSummary} / ${r.billUnit}/月`;
   els.utilizationRateText.textContent = r.input.utilizationWeeks > 0
     ? `${fmtNum(r.input.utilizationWeeks, 1)} 周：${fmtMoney(r.utilizationByVolume, r.mp.currency)} / ${r.billUnit}`
     : "未填写周数，默认不计";
-  els.agedRateText.textContent = `${fmtMoney(r.agedByVolume, r.mp.currency)} / ${r.billUnit}` + (r.min365 ? `，365+ 最低 ${fmtMoney(r.min365, r.mp.currency)}` : "");
-  els.perUnitText.textContent = `单件 ${fmtMoney(r.costPerUnit, r.mp.currency)}；${fmtNum(r.units, 0)} 件合计；${taxModeLabel(r.taxMode)}${r.taxRate ? `含税费 ${fmtMoney(r.taxAmount, r.mp.currency)}` : ""}`;
-  els.formulaText.textContent = `总库存体积 x 各月占用天数 / 当月天数 x 当月费率`;
+  els.agedRateText.textContent = r.agedChecks.length
+    ? `${r.agedChecks.length} 次核查：${r.agedChecks.map(check => `${check.checkDate} ${check.ageDays}天`).join("；")}`
+    : "测算区间内没有每月 15 日核查点";
+  els.perUnitText.textContent = `${fmtNum(r.units, 0)} 件合计 ${fmtMoney(r.totalFee, r.mp.currency)}；${taxModeLabel(r.taxMode, r.mp.code)}${r.taxRate ? `，税费 ${fmtMoney(r.taxAmount, r.mp.currency)}` : ""}`;
+  els.formulaText.textContent = `单件费用逐月计算，合计费用 = 单件费用 x 数量`;
 
   const segmentBreakdown = r.segments.length
-    ? r.segments.map(segment => `${segment.month}：${fmtNum(segment.days, 1)}/${segment.daysInMonth} 天，${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}/${r.billUnit}/月，基础费 ${fmtMoney(segment.baseFee, r.mp.currency)}（${taxModeLabel(r.taxMode)}）`).join("<br>")
+    ? r.segments.map(segment => `${segment.month}：${fmtNum(segment.days, 0)}/${segment.daysInMonth} 天，${seasonLabel(segment.seasonBand)} ${fmtMoney(segment.baseRate, r.mp.currency)}/${r.billUnit}/月，单件基础费 ${fmtMoney(segment.unitBaseFee, r.mp.currency)}，${fmtNum(r.units, 0)} 件合计 ${fmtMoney(segment.baseFee, r.mp.currency)}（${taxModeLabel(r.taxMode, r.mp.code)}）`).join("<br>")
     : "周转天数为 0，无计费月份";
+  const agedCheckBreakdown = r.agedChecks.length
+    ? r.agedChecks.map(check => `${check.checkDate}：库龄 ${check.ageDays} 天，${ageBandLabel(check.ageBand)}，费率 ${fmtMoney(check.agedByVolume, r.mp.currency)}/${r.billUnit}，单件费 ${fmtMoney(check.unitAgedFee, r.mp.currency)}`).join("<br>")
+    : "测算区间内没有每月 15 日核查点";
 
   const rows = [
     ["SKU", r.sku || "-"],
     ["国家", `${countryLabel(r.mp.code)} / ${r.mp.region}`],
-    ["测算日期", r.calculationDate],
-    ["测算区间", `${r.calculationDate} 至 ${r.calculationEndDate}，共 ${fmtNum(r.input.storageDays, 1)} 天（开始日期计入第 1 天）`],
+    ["测算日期", `${r.calculationDate}（仓储测算起始日）`],
+    ["测算区间", `${r.calculationDate} 至 ${r.calculationEndDate}，共 ${fmtNum(r.input.storageDays, 0)} 天（开始日期计入第 1 天）`],
     ["计费季节", `${seasonSummary}（按测算区间自动判断）`],
-    ["费用口径", `${taxModeLabel(r.taxMode)}；税率 ${fmtNum(r.taxRate * 100, 1)}%${r.mp.code === "JP" ? "（日本官方费率已含 10%；不含税时除以 1.10）" : "（当前国家未叠加税费）"}`],
+    ["费用口径", r.mp.code === "JP" ? `${taxModeLabel(r.taxMode, r.mp.code)}；税率 ${fmtNum(r.taxRate * 100, 1)}%（日本官方费率已含 10%；不含税时除以 1.10）` : "不适用：按官方费率原值计算，不额外加税或扣税"],
     ["仓储类目", `${storageCategoryLabel(r.mp.code, r.storageCategory)}；${requirement.required ? "当前国家需要提供类目" : "当前国家无需提供类目"}`],
     ["尺寸类型", `${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / 危险品" : ""}`],
     ["尺寸判断依据", r.sizeDecision.reason],
-    ["库存库龄", ageBandLabel(r.ageBand)],
+    ["测算开始时库存库龄", `${r.initialAgeDays} 天（${ageBandLabel(r.ageBand)}）`],
+    ["测算结束时库存库龄", `${r.endingAgeDays} 天（${ageBandLabel(r.endingAgeBand)}）`],
     ["单件体积", `${fmtVolume(r.unitVolume)} ${r.billUnit}`],
     ["总库存体积", `${fmtVolume(r.unitVolume)} × ${fmtNum(r.units, 0)} 件 = ${fmtVolume(r.totalInventoryVolume)} ${r.billUnit}`],
+    ["体积精度口径", `体积先四舍五入保留 4 位；展示和费用计算使用同一个体积值`],
     ["逐月基础费明细", segmentBreakdown],
-    ["周转期基础仓储费", `${fmtMoney(r.baseFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.baseFee, r.mp.currency)}`],
-    ["仓储利用率附加费公式", `总库存体积 × 各月天数/当月天数 × ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.utilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.utilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
-    ["库龄附加费公式", `逐月 max(体积计费, 单件最低费) = ${fmtMoney(r.agedFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.agedFee, r.mp.currency)}`],
+    ["单件基础仓储费", `${fmtMoney(r.unitBaseFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitBaseFee, r.mp.currency)}`],
+    ["单件仓储利用率附加费公式", `单件体积 × 各月天数/当月天数 × ${fmtNum(r.utilizationByVolume, 4)} = ${fmtMoney(r.unitUtilizationFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitUtilizationFee, r.mp.currency)}（周数 ${fmtNum(r.input.utilizationWeeks, 1)}）`],
+    ["库龄费核查明细", agedCheckBreakdown],
+    ["单件库龄附加费公式", `各核查日 max(单件体积 × 当日库龄档费率, 单件最低费) 后汇总 = ${fmtMoney(r.unitAgedFeeExTax, r.mp.currency)} 不含税；结果 ${fmtMoney(r.unitAgedFee, r.mp.currency)}`],
+    ["预计单件仓储费", fmtMoney(r.costPerUnit, r.mp.currency)],
+    ["全部库存仓储费合计", `${fmtMoney(r.costPerUnit, r.mp.currency)} × ${fmtNum(r.units, 0)} 件 = ${fmtMoney(r.totalFee, r.mp.currency)}`],
     ["税费", r.taxMode === "taxIncluded"
       ? `含税结果 ${fmtMoney(r.totalFee, r.mp.currency)} − 不含税结果 ${fmtMoney(r.subtotalExTax, r.mp.currency)} = ${fmtMoney(r.taxAmount, r.mp.currency)}（税率 ${fmtNum(r.taxRate * 100, 1)}%）`
       : `不含税口径，结果未叠加 ${fmtNum(r.taxRate * 100, 1)}% 消费税`],
@@ -1669,65 +1869,74 @@ function renderSeasonTable() {
 }
 
 function renderAgedTable() {
-  const bands = ["0_90","91_180","181_210","211_240","241_270","271_300","301_330","331_365","366_455","456_plus"];
-  const labels = {"0_90":"0-90（含90）","91_180":"91-180（含180）","181_210":"181-210（含210）","211_240":"211-240（含240）","241_270":"241-270（含270）","271_300":"271-300（含300）","301_330":"301-330（含330）","331_365":"331-365（含365）","366_455":"366-455（含455）","456_plus":"456+（不含455）"};
-  const rows = MARKETPLACES.map(mp => {
+  const rows = MARKETPLACES.flatMap(mp => {
     const r = RATES.aged[mp.code];
     const isNotApplicable = String(r.status || "").startsWith("not_applicable");
     const isPending = String(r.status || "").startsWith("needs_official_check");
     const rateText = (value, band) => {
       if (Number(value) > 0) return fmtMoney(Number(value), mp.currency);
       if (isNotApplicable) return "不适用";
-      if (isPending && !["0_90", "91_180"].includes(band)) return "待核实";
+      if (isPending) return "待核实";
       return "—";
     };
-    return `<tr>
-      <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
-      ${bands.map(b => `<td class="num">${rateText(r.byVolume[b], b)}</td>`).join("")}
-      <td class="num">${rateText(r.perUnitMinimumByBand?.["366_455"] || r.perUnitMinimum365 || 0, "366_455")}</td>
-      <td class="subtle">${r.status}<br>${r.note || ""}</td>
-    </tr>`;
+    return (r.bandKeys || []).map((band, index) => `<tr>
+      <td>${index === 0 ? `<strong>${COUNTRY_NAMES[mp.code] || mp.code}</strong><div class="subtle">${mp.code} · ${mp.currency} / ${mp.unit}</div>` : ""}</td>
+      <td>${ageBandLabel(band)}</td>
+      <td class="num">${rateText(r.byVolume?.[band], band)}${Number(r.byVolume?.[band]) > 0 ? ` / ${mp.unit}` : ""}</td>
+      <td class="num">${rateText(r.perUnitMinimumByBand?.[band] || 0, band)}${Number(r.perUnitMinimumByBand?.[band]) > 0 ? " / 件" : ""}</td>
+      <td class="subtle">${index === 0 ? `${r.status}<br>${r.note || ""}` : ""}</td>
+    </tr>`);
   }).join("");
   document.getElementById("agedTab").innerHTML = `<table>
-    <thead><tr><th>国家</th>${bands.map(b => `<th>${labels[b]}</th>`).join("")}<th>365+ 单件最低</th><th>状态</th></tr></thead>
+    <thead><tr><th>国家</th><th>官方库龄区间</th><th class="num">按体积费率</th><th class="num">单件最低费</th><th>状态</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
 
 function renderUtilizationTable() {
-  const rows = MARKETPLACES.map(mp => {
+  const genericTiers = [
+    [22, 28, "22 < 周数 ≤ 28"],
+    [28, 36, "28 < 周数 ≤ 36"],
+    [36, 44, "36 < 周数 ≤ 44"],
+    [44, 52, "44 < 周数 ≤ 52"],
+    [52, Infinity, "周数 > 52"]
+  ];
+  const genericRows = MARKETPLACES.filter(mp => mp.code !== "JP").map(mp => {
     const row = RATES.utilization?.[mp.code] || { thresholds: [], status: "not_loaded", note: "" };
-    const text = (item, key, isJpTier) => {
-      if (item) return fmtMoney(Number(item[key] || 0), mp.currency);
-      if ((mp.code === "JP") !== isJpTier) return "不适用";
-      if (String(row.status || "").startsWith("not_applicable")) return "不适用";
-      if (["SG", "TR", "BR"].includes(mp.code)) return "待补";
-      return "官方未列";
-    };
-    const tier = (min, max) => (row.thresholds || []).find(item => item.min === min && item.max === max);
-    const tiers = [
-      [22, 28, "22<周数≤28"],
-      [28, 36, "28<周数≤36"],
-      [36, 44, "36<周数≤44"],
-      [44, 52, "44<周数≤52"],
-      [52, Infinity, "周数>52"],
-      [26, 39, "JP 26≤周数<39"],
-      [39, 52, "JP 39≤周数≤52"]
-    ];
-    return `<tr>
-      <td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>
-      ${tiers.map(([min, max, label]) => {
-        const found = tier(min, max);
-        const isJpTier = label.startsWith("JP");
-        return `<td><strong>${label}</strong><div class="subtle">标准 ${text(found, "standard", isJpTier)} / 大件 ${text(found, "oversize", isJpTier)}${found?.jp_fashion ? `<br>JP服装 ${fmtMoney(found.jp_fashion, mp.currency)}` : ""}</div></td>`;
-      }).join("")}
-      <td class="subtle">${row.status}<br>${row.note}</td>
-    </tr>`;
+    const emptyText = String(row.status || "").startsWith("not_applicable")
+      ? "不适用"
+      : (["SG", "TR", "BR"].includes(mp.code) ? "待补" : "官方未列");
+    const cells = genericTiers.map(([min, max]) => {
+      const item = (row.thresholds || []).find(tier => tier.min === min && tier.max === max);
+      return item
+        ? `<td>标准 ${fmtMoney(Number(item.standard || 0), mp.currency)}<br><span class="subtle">大件 ${fmtMoney(Number(item.oversize || 0), mp.currency)}</span></td>`
+        : `<td>${emptyText}</td>`;
+    }).join("");
+    return `<tr><td><strong>${mp.code}</strong><div class="subtle">${mp.currency} / ${mp.unit}</div></td>${cells}<td class="subtle">${row.status}<br>${row.note}</td></tr>`;
   }).join("");
-  document.getElementById("utilizationTab").innerHTML = `<table>
-    <thead><tr><th>国家</th><th>22-28</th><th>28-36</th><th>36-44</th><th>44-52</th><th>52+</th><th>JP 26-39</th><th>JP 39-52</th><th>状态</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  const jp = getMarket("JP");
+  const jpRow = RATES.utilization.JP;
+  const jpTiers = [
+    [null, null, "周数 < 26"],
+    [26, 39, "26 ≤ 周数 < 39"],
+    [39, 52, "39 ≤ 周数 ≤ 52"],
+    [52, Infinity, "周数 > 52"]
+  ];
+  const jpCells = jpTiers.map(([min, max]) => {
+    const item = min === null ? { standard: 0, oversize: 0, jp_fashion: 0 } : jpRow.thresholds.find(tier => tier.min === min && tier.max === max);
+    return `<td>标准 ${fmtMoney(Number(item.standard || 0), jp.currency)}<br><span class="subtle">大件 ${fmtMoney(Number(item.oversize || 0), jp.currency)}<br>服装 ${fmtMoney(Number(item.jp_fashion || 0), jp.currency)}</span></td>`;
+  }).join("");
+  document.getElementById("utilizationTab").innerHTML = `
+    <h3>通用站点</h3>
+    <table>
+      <thead><tr><th>国家</th>${genericTiers.map(([, , label]) => `<th>${label}</th>`).join("")}<th>状态</th></tr></thead>
+      <tbody>${genericRows}</tbody>
+    </table>
+    <h3 style="margin-top:18px;">日本站</h3>
+    <table>
+      <thead><tr><th>国家</th>${jpTiers.map(([, , label]) => `<th>${label}</th>`).join("")}<th>状态</th></tr></thead>
+      <tbody><tr><td><strong>JP</strong><div class="subtle">${jp.currency} / ${jp.unit}</div></td>${jpCells}<td class="subtle">${jpRow.status}<br>${jpRow.note}</td></tr></tbody>
+    </table>`;
 }
 
 function renderSources() {
@@ -1777,30 +1986,55 @@ function parseCsvLine(line) {
   return cells.map(c => c.trim());
 }
 
+function readStorageDays(row, rowNumber) {
+  const keys = ["storage_days", "inventory_turnover_days", "turnover_days"];
+  const provided = keys
+    .filter(key => row[key] !== undefined && String(row[key]).trim() !== "")
+    .map(key => ({ key, value: row[key], number: Number(row[key]) }));
+  if (!provided.length) return undefined;
+  if (provided.some(item => !Number.isFinite(item.number))) {
+    throw new Error(`第 ${rowNumber} 行的周转天数字段必须是有效数字。`);
+  }
+  if (provided.some(item => item.number !== provided[0].number)) {
+    throw new Error(`第 ${rowNumber} 行同时填写了多个周转天数字段且数值不一致。`);
+  }
+  return provided[0].value;
+}
+
 function batchCalculate() {
-  const lines = els.batchInput.value.split(/\r?\n/).filter(Boolean);
-  const headers = parseCsvLine(lines.shift() || "").map(h => h.trim());
-  lastBatchRows = lines.map(line => {
-    const row = Object.fromEntries(parseCsvLine(line).map((v, i) => [headers[i], v]));
-    const result = calculate({
-      sku: row.sku || row.SKU || "",
-      marketplace: row.country || row.marketplace || "US",
-      calculationDate: normalizeCalculationDate(row.calculation_date || row.calculationDate),
-      storageCategory: row.storage_category || row.category || "default",
-      hazmat: row.hazmat || "no",
-      taxMode: normalizeTaxMode(row.tax_mode || row.taxMode || "taxIncluded"),
-      billingUnit: "auto",
-      length: Number(row.length_cm || row.length || 0),
-      width: Number(row.width_cm || row.width || 0),
-      height: Number(row.height_cm || row.height || 0),
-      weightKg: Number(row.weight_kg || 0),
-      units: Number(row.quantity || row.units || 1),
-      storageDays: Number(row.storage_days || 0),
-      utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
-      ageBand: normalizeAgeBand(row.age_band)
+  try {
+    const lines = els.batchInput.value.split(/\r?\n/).filter(Boolean);
+    const headers = parseCsvLine(lines.shift() || "").map(h => h.trim().toLowerCase());
+    lastBatchRows = lines.map((line, index) => {
+      const row = Object.fromEntries(parseCsvLine(line).map((v, i) => [headers[i], v]));
+      try {
+        return calculate({
+          sku: row.sku || "",
+          marketplace: row.country || row.marketplace,
+          calculationDate: row.calculation_date,
+          storageCategory: row.storage_category || row.category || "default",
+          hazmat: row.hazmat || "no",
+          taxMode: row.tax_mode,
+          length: row.length_cm ?? row.length,
+          width: row.width_cm ?? row.width,
+          height: row.height_cm ?? row.height,
+          weightKg: row.weight_kg,
+          units: row.quantity ?? row.units,
+          storageDays: readStorageDays(row, index + 2),
+          utilizationWeeks: row.utilization_weeks ?? row.storage_utilization_weeks,
+          initialAgeDays: parseInitialAgeDays(row, index + 2)
+        });
+      } catch (error) {
+        if (String(error.message).startsWith(`第 ${index + 2} 行`)) throw error;
+        throw new Error(`第 ${index + 2} 行：${error.message}`);
+      }
     });
-    return result;
-  });
+  } catch (error) {
+    lastBatchRows = [];
+    els.batchWrap.classList.add("hidden");
+    alert(`批量计算失败：${error.message}`);
+    return;
+  }
   els.batchWrap.classList.remove("hidden");
   els.batchTable.innerHTML = lastBatchRows.map(r => `<tr>
     <td>${r.sku || "-"}</td>
@@ -1809,6 +2043,7 @@ function batchCalculate() {
     <td>${r.sizeDecision.label}${r.input.hazmat === "yes" ? " / hazmat" : ""}<div class="subtle">${storageCategoryLabel(r.mp.code, r.storageCategory)}</div></td>
     <td class="num">${fmtNum(r.units, 0)}</td>
     <td class="num">${fmtVolume(r.unitVolume)} ${r.billUnit}</td>
+    <td class="num">${fmtMoney(r.costPerUnit, r.mp.currency)}</td>
     <td class="num">${fmtMoney(r.totalFee, r.mp.currency)}</td>
     <td>${RATES.monthly[r.mp.code]?.status || ""}</td>
   </tr>`).join("");
@@ -1816,11 +2051,12 @@ function batchCalculate() {
 
 function downloadCsv() {
   if (!lastBatchRows.length) batchCalculate();
+  if (!lastBatchRows.length) return;
   const csvMoney = value => Number(value || 0).toFixed(MONEY_DECIMALS);
   const csvVolume = value => Number(value || 0).toFixed(VOLUME_DECIMALS);
-  const header = ["sku","country","marketplace","calculation_date","calculation_end_date","season_summary","storage_category","tax_mode","tax_rate","tax_amount","currency","size_type","quantity","storage_days","utilization_weeks","billing_unit","unit_volume","total_inventory_volume","volume_months","base_fee_ex_tax","utilization_fee_ex_tax","aged_fee_ex_tax","subtotal_ex_tax","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
+  const header = ["sku","country","marketplace","calculation_date","calculation_end_date","season_summary","storage_category","tax_mode","tax_rate","tax_amount","currency","size_type","quantity","storage_days","utilization_weeks","initial_age_days","ending_age_days","aged_check_count","aged_check_dates","billing_unit","unit_volume","total_inventory_volume","base_fee_ex_tax","utilization_fee_ex_tax","aged_fee_ex_tax","subtotal_ex_tax","base_fee","utilization_fee","aged_fee","total_fee","cost_per_unit","status"];
   const rows = lastBatchRows.map(r => [
-    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, r.calculationDate, r.calculationEndDate, [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join("+"), r.storageCategory, r.taxMode, r.taxRate, csvMoney(r.taxAmount), r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays || "", r.input.utilizationWeeks || "", r.billUnit, csvVolume(r.unitVolume), csvVolume(r.totalInventoryVolume), csvVolume(r.totalVolume),
+    r.sku || "", COUNTRY_NAMES[r.mp.code] || r.mp.code, r.mp.code, r.calculationDate, r.calculationEndDate, [...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join("+"), r.storageCategory, r.taxMode, r.taxRate, csvMoney(r.taxAmount), r.mp.currency, r.sizeDecision.type, r.units, r.input.storageDays, r.input.utilizationWeeks, r.initialAgeDays, r.endingAgeDays, r.agedChecks.length, r.agedChecks.map(check => check.checkDate).join("+"), r.billUnit, csvVolume(r.unitVolume), csvVolume(r.totalInventoryVolume),
     csvMoney(r.baseFeeExTax), csvMoney(r.utilizationFeeExTax), csvMoney(r.agedFeeExTax), csvMoney(r.subtotalExTax),
     csvMoney(r.baseFee), csvMoney(r.utilizationFee), csvMoney(r.agedFee), csvMoney(r.totalFee), csvMoney(r.costPerUnit),
     RATES.monthly[r.mp.code]?.status || ""
@@ -1875,25 +2111,30 @@ function importRatesJson(file) {
 
 function copyResult() {
   if (!lastResult) renderResult();
+  if (!lastResult) return;
   const r = lastResult;
   const text = [
     `SKU：${r.sku || "-"}`,
     `国家：${countryLabel(r.mp.code)}`,
-    `测算日期：${r.calculationDate}`,
-    `测算区间：${r.calculationDate} 至 ${r.calculationEndDate}（${fmtNum(r.input.storageDays, 1)} 天）`,
+    `测算日期（仓储测算起始日）：${r.calculationDate}`,
+    `测算区间：${r.calculationDate} 至 ${r.calculationEndDate}（${fmtNum(r.input.storageDays, 0)} 天）`,
     `计费季节：${[...new Set(r.segments.map(segment => seasonLabel(segment.seasonBand)))].join(" + ") || "无"}`,
-    `费用口径：${taxModeLabel(r.taxMode)}；税率 ${fmtNum(r.taxRate * 100, 1)}%；税费 ${fmtMoney(r.taxAmount, r.mp.currency)}`,
+    `费用口径：${taxModeLabel(r.taxMode, r.mp.code)}；税率 ${fmtNum(r.taxRate * 100, 1)}%；税费 ${fmtMoney(r.taxAmount, r.mp.currency)}`,
     `仓储类目：${storageCategoryLabel(r.mp.code, r.storageCategory)}`,
     `尺寸类型：${r.sizeDecision.label}`,
     `单件体积：${fmtVolume(r.unitVolume)} ${r.billUnit}`,
     `总库存体积：${fmtVolume(r.totalInventoryVolume)} ${r.billUnit}`,
-    `单品存放/周转天数：${fmtNum(r.input.storageDays, 1)} 天`,
+    `体积精度口径：体积先四舍五入保留 4 位；展示和费用计算使用同一个体积值`,
+    `单件存放/周转天数：${fmtNum(r.input.storageDays, 0)} 天`,
     `仓储利用率周数：${fmtNum(r.input.utilizationWeeks, 1)}`,
-    `周转期基础仓储费：${fmtMoney(r.baseFee, r.mp.currency)}`,
-    `仓储利用率附加费：${fmtMoney(r.utilizationFee, r.mp.currency)}`,
-    `库龄附加费：${fmtMoney(r.agedFee, r.mp.currency)}`,
-    `总费用：${fmtMoney(r.totalFee, r.mp.currency)}`,
-    `单件摊销：${fmtMoney(r.costPerUnit, r.mp.currency)}`
+    `测算开始时库存库龄：${r.initialAgeDays} 天`,
+    `测算结束时库存库龄：${r.endingAgeDays} 天`,
+    `库龄费核查：${r.agedChecks.map(check => `${check.checkDate}（${check.ageDays}天，${fmtMoney(check.unitAgedFee, r.mp.currency)}）`).join("；") || "无"}`,
+    `单件基础仓储费：${fmtMoney(r.unitBaseFee, r.mp.currency)}`,
+    `单件仓储利用率附加费：${fmtMoney(r.unitUtilizationFee, r.mp.currency)}`,
+    `单件库龄附加费：${fmtMoney(r.unitAgedFee, r.mp.currency)}`,
+    `预计单件仓储费：${fmtMoney(r.costPerUnit, r.mp.currency)}`,
+    `全部库存仓储费合计：${fmtMoney(r.costPerUnit, r.mp.currency)} × ${fmtNum(r.units, 0)} 件 = ${fmtMoney(r.totalFee, r.mp.currency)}`
   ].join("\n");
   navigator.clipboard?.writeText(text);
 }
@@ -1911,7 +2152,6 @@ function bindEvents() {
     els.storageCategory.value = "default";
     els.hazmat.value = "no";
     els.taxMode.value = "taxIncluded";
-    els.billingUnit.value = "auto";
     els.length.value = 30;
     els.width.value = 20;
     els.height.value = 5;
@@ -1919,7 +2159,7 @@ function bindEvents() {
     els.storageDays.value = 45;
     els.utilizationWeeks.value = 0;
     els.units.value = 1;
-    els.ageBand.value = "0_90";
+    els.initialAgeDays.value = 0;
     renderResult();
   });
   document.getElementById("batchBtn").addEventListener("click", batchCalculate);
@@ -1964,23 +2204,28 @@ function parseStorageApiRows(text) {
 
 function storageApiResult(item) {
   const row = item.row;
-  const result = calculate({
-    sku: row.sku || row.SKU || "",
-    marketplace: row.country || row.marketplace || "US",
-    calculationDate: normalizeCalculationDate(row.calculation_date || row.calculationDate),
-    storageCategory: row.storage_category || row.category || "default",
-    hazmat: row.hazmat || row.is_hazmat || "no",
-    taxMode: normalizeTaxMode(row.tax_mode || row.taxMode || "taxIncluded"),
-    billingUnit: "auto",
-    length: Number(row.length_cm || row.length || 0),
-    width: Number(row.width_cm || row.width || 0),
-    height: Number(row.height_cm || row.height || 0),
-    weightKg: Number(row.weight_kg || row.package_weight_kg || 0),
-    units: Number(row.quantity || row.units || 1),
-    storageDays: Number(row.storage_days || row.inventory_turnover_days || row.turnover_days || 0),
-    utilizationWeeks: Number(row.utilization_weeks || row.storage_utilization_weeks || 0),
-    ageBand: normalizeAgeBand(row.age_band)
-  });
+  let result;
+  try {
+    result = calculate({
+      sku: row.sku || "",
+      marketplace: row.country || row.marketplace,
+      calculationDate: row.calculation_date,
+      storageCategory: row.storage_category || row.category || "default",
+      hazmat: row.hazmat || row.is_hazmat || "no",
+      taxMode: row.tax_mode,
+      length: row.length_cm ?? row.length,
+      width: row.width_cm ?? row.width,
+      height: row.height_cm ?? row.height,
+      weightKg: row.weight_kg ?? row.package_weight_kg,
+      units: row.quantity ?? row.units,
+      storageDays: readStorageDays(row, item.rowNumber),
+      utilizationWeeks: row.utilization_weeks ?? row.storage_utilization_weeks,
+      initialAgeDays: parseInitialAgeDays(row, item.rowNumber)
+    });
+  } catch (error) {
+    if (String(error.message).startsWith(`第 ${item.rowNumber} 行`)) throw error;
+    throw new Error(`第 ${item.rowNumber} 行：${error.message}`);
+  }
   return {
     row_number: item.rowNumber,
     sku: result.sku || "",
@@ -1996,15 +2241,23 @@ function storageApiResult(item) {
     storage_tax_mode: result.taxMode,
     storage_tax_rate: result.taxRate,
     storage_tax_amount_local: result.taxAmount,
-    inventory_turnover_days: result.input.storageDays || 0,
-    storage_utilization_weeks: result.input.utilizationWeeks || 0,
-    storage_days: result.input.storageDays || 0,
-    storage_age_band: result.ageBand,
+    quantity: result.units,
+    length_cm: result.input.length,
+    width_cm: result.input.width,
+    height_cm: result.input.height,
+    weight_kg: result.input.weightKg,
+    hazmat: result.input.hazmat,
+    storage_utilization_weeks: result.input.utilizationWeeks,
+    storage_days: result.input.storageDays,
+    storage_initial_age_days: result.initialAgeDays,
+    storage_ending_age_days: result.endingAgeDays,
+    storage_start_age_band: result.ageBand,
+    storage_ending_age_band: result.endingAgeBand,
+    storage_aged_check_dates: result.agedChecks.map(check => check.checkDate),
     storage_size_type: result.sizeDecision.type,
     storage_billing_unit: result.billUnit,
     storage_unit_volume: result.unitVolume,
     storage_total_inventory_volume: result.totalInventoryVolume,
-    storage_volume_months: result.totalVolume,
     storage_base_fee_ex_tax_local: result.baseFeeExTax,
     storage_utilization_fee_ex_tax_local: result.utilizationFeeExTax,
     storage_aged_fee_ex_tax_local: result.agedFeeExTax,
